@@ -1,6 +1,6 @@
 ﻿namespace Ecommerce.DTOs.Auth
 {
-    public class ResetPasswordDto
+    public class ResetPasswordRequest
     {
         public string Email { get; set; } = null!;
 

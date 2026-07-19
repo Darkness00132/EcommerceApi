@@ -8,7 +8,7 @@ namespace Ecommerce.Common.Mappers
     {
         public AuthMapping() 
         {
-            CreateMap<RegisterDto, AppUser>()
+            CreateMap<RegisterRequest, AppUser>()
                 .ForMember(x => x.UserName,opt => opt.MapFrom(x => x.Email));
         }
     }

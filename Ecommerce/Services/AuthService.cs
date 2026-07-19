@@ -1,10 +1,11 @@
-﻿using AutoMapper;
+﻿    using AutoMapper;
 using Ecommerce.Common.Exceptions;
 using Ecommerce.Data.Entities;
 using Ecommerce.Data.Enums;
 using Ecommerce.DTOs.Auth;
 using Ecommerce.Settings;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace Ecommerce.Services
 {
@@ -19,7 +20,7 @@ namespace Ecommerce.Services
         private readonly FrontendSettings _frontend;
         private readonly JwtSettings _jwtSettings;
         private readonly ILogger<AuthService> _logger;
-        public AuthService(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IMapper mapper, JwtService jwtService, RefreshTokenService refreshTokenService, IEmailSender<AppUser> emailSender, FrontendSettings frontend, JwtSettings jwtSettings, ILogger<AuthService> logger)
+        public AuthService(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IMapper mapper, JwtService jwtService, RefreshTokenService refreshTokenService, IEmailSender<AppUser> emailSender, IOptions<FrontendSettings> frontend, IOptions<JwtSettings> jwtSettings, ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -27,11 +28,11 @@ namespace Ecommerce.Services
             _jwtService = jwtService;
             _refreshTokenService = refreshTokenService;
             _emailSender = emailSender;
-            _frontend = frontend;
-            _jwtSettings = jwtSettings;
+            _frontend = frontend.Value;
+            _jwtSettings = jwtSettings.Value;
             _logger = logger;
         }
-        public async Task RegisterAsync(RegisterDto model)
+        public async Task RegisterAsync(RegisterRequest model)
         {
             var userExists = await _userManager.FindByEmailAsync(model.Email);
 
@@ -55,7 +56,7 @@ namespace Ecommerce.Services
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            var link = $"{_frontend.BaseUrl}/confirm-email?userId={user.Id}&token={token}";
+            var link = $"{_frontend.BaseUrl}/auth/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
 
             await _emailSender.SendConfirmationLinkAsync(
@@ -92,9 +93,10 @@ namespace Ecommerce.Services
                 _logger.LogWarning("Invalid confirmation token for user {UserId}.", user.Id);
                 throw new BadRequestException("Invalid confirmation token.");
             }
+            _logger.LogInformation("Email confirmed successfully for user {UserId}.", user.Id);
         }
 
-        public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
+        public async Task<AuthResponse> LoginAsync(LoginRequest dto)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
@@ -132,7 +134,7 @@ namespace Ecommerce.Services
         }
 
 
-        public async Task<AuthResponseDto> RefreshTokenAsync(string token)
+        public async Task<AuthResponse> RefreshTokenAsync(string token)
         {
             var refreshToken = await _refreshTokenService.GetValidAsync(token);
 
@@ -145,13 +147,7 @@ namespace Ecommerce.Services
 
             await _refreshTokenService.RevokeAsync(token);
 
-            _logger.LogInformation(
-                "Refresh token used successfully for user {UserId}.",
-                refreshToken.UserId);
-
-
-            await _refreshTokenService.RevokeAsync(token);
-
+            _logger.LogInformation("Refresh token used successfully for user {UserId}.", refreshToken.UserId);
 
             return await GenerateAuthResponse(refreshToken.User);
         }
@@ -180,8 +176,7 @@ namespace Ecommerce.Services
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            var link = $"{_frontend.BaseUrl}/reset-password?email={email}&token={token}";
-
+            var link = $"{_frontend.BaseUrl}/auth/reset-password?email={email}&token={Uri.EscapeDataString(token)}";
 
             await _emailSender.SendPasswordResetLinkAsync(
                 user,
@@ -194,7 +189,7 @@ namespace Ecommerce.Services
         }
 
 
-        public async Task ResetPasswordAsync(ResetPasswordDto model)
+        public async Task ResetPasswordAsync(ResetPasswordRequest model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
 
@@ -224,19 +219,17 @@ namespace Ecommerce.Services
         }
 
 
-        private async Task<AuthResponseDto> GenerateAuthResponse(AppUser user)
+        private async Task<AuthResponse> GenerateAuthResponse(AppUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
 
             var refreshToken = await _refreshTokenService.CreateAsync(user);
 
-            return new AuthResponseDto
+            return new AuthResponse
             {
                 AccessToken = _jwtService.GenerateToken(user, roles),
                 RefreshToken = refreshToken.Token,
-                AccessTokenExpiration = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
-                Email = user.Email!,
-                Roles = roles
+                AccessTokenExpiration = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes)
             };
         }
     }

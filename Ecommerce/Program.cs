@@ -62,7 +62,7 @@ builder.Services
 
         options.User.RequireUniqueEmail = true;
 
-        options.SignIn.RequireConfirmedEmail = false;
+        options.SignIn.RequireConfirmedEmail = true;
     })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
@@ -135,26 +135,30 @@ builder.Services.AddOpenApi(options =>
 
 #endregion
 
-#region Misc
+#region Security
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
 builder.Services.AddAntiforgery(options =>
 {
-    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "XSRF-TOKEN";
+    options.HeaderName = "X-XSRF-TOKEN";
+
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 builder.Services.AddProblemDetails();
-
-builder.Services.AddHealthChecks();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 #endregion
 
@@ -181,16 +185,16 @@ if (app.Environment.IsDevelopment())
     {
         options.WithTitle("Ecommerce API Documentation");
     });
+    app.UseDeveloperExceptionPage();
 }
 else
 {
     app.UseExceptionHandler();
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseSerilogRequestLogging();
-
-app.UseHttpsRedirection();
 
 app.UseCors();
 
@@ -199,8 +203,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.MapHealthChecks("/health");
 
 #region initalize roles
 using var scope = app.Services.CreateScope();

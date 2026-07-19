@@ -1,6 +1,6 @@
 ﻿namespace Ecommerce.DTOs.Auth
 {
-    public class RefreshTokenDto
+    public class RefreshTokenRequest
     {
         public string RefreshToken { get; set; } = null!;
     }
