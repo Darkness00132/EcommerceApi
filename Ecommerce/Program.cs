@@ -1,9 +1,11 @@
-using Ecommerce.Data;
-using Ecommerce.Data.Entities;
-using Ecommerce.Data.Enums;
+using Application.Interfaces.Services;
+using Domain.Entities;
+using Domain.Enums;
 using Ecommerce.Services;
-using Ecommerce.Settings;
-using Ecommerce.ThirdPartyServices;
+using Infrastructure;
+using Infrastructure.Services;
+using Infrastructure.Settings;
+using Infrastructure.ThirdPartyServices.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -168,10 +170,11 @@ builder.Services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.
 builder.Services.AddMemoryCache(config => config.SizeLimit = 1024);
 
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<JwtService>();
-builder.Services.AddScoped<RefreshTokenService>();
 
-builder.Services.AddScoped<IEmailSender<AppUser>, EmailSender>();
+builder.Services.AddScoped<IJwtService,JwtService>();
+builder.Services.AddScoped<IRefreshTokenService,RefreshTokenService>();
+builder.Services.AddSingleton<RazorService>();
+builder.Services.AddTransient<IEmailService , EmailService>();
 //builder.Services.AddScoped<>();
 
 #endregion

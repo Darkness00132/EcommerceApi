@@ -1,6 +1,6 @@
-﻿using Ecommerce.DTOs.Auth;
+﻿using Application.DTOs.Auth;
 using Ecommerce.Services;
-using Ecommerce.Settings;
+using Infrastructure.Settings;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -24,9 +24,10 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Registers a new user account.
-    /// The account is created with a customer role and remains inactive
-    /// until the user confirms their email address through the link sent by email.
     /// </summary>
+    /// <remarks>
+    /// The account requires email confirmation before login.
+    /// </remarks>
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest model)
     {
@@ -35,12 +36,11 @@ public class AuthController : ControllerBase
         return Ok();
     }
 
-
     /// <summary>
     /// Confirms a user's email address.
-    /// The user must provide the user identifier and confirmation token
-    /// received from the registration email before they can authenticate.
     /// </summary>
+    /// <param name="userId">User identifier.</param>
+    /// <param name="token">Email confirmation token.</param>
     [HttpGet("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(
         [FromQuery] Guid userId,
@@ -53,11 +53,9 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Authenticates a user and returns JWT tokens.
-    /// This endpoint is designed for clients that store and manage tokens themselves,
-    /// such as mobile applications.
-    /// The client must send the refresh token when requesting a new access token.
+    /// Authenticates a user and returns access and refresh tokens.
     /// </summary>
+    /// <returns>Authentication tokens.</returns>
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest model)
     {
@@ -69,12 +67,10 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Authenticates a web user and creates a refresh token cookie.
-    /// The refresh token is stored in an HttpOnly cookie so it cannot be accessed
-    /// by JavaScript, reducing the impact of XSS attacks.
-    /// 
-    /// The returned access token should be stored by the frontend and sent
-    /// in the Authorization header for protected API requests.
     /// </summary>
+    /// <remarks>
+    /// Designed for browser-based clients.
+    /// </remarks>
     [HttpPost("login-web")]
     public async Task<ActionResult<WebAuthResponse>> LoginWeb(LoginRequest model)
     {
@@ -104,11 +100,11 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Refreshes an expired access token using a refresh token provided by the client.
-    /// 
-    /// This endpoint is intended for mobile applications or clients that manage
-    /// refresh tokens manually instead of storing them in browser cookies.
+    /// Refreshes access tokens using a refresh token.
     /// </summary>
+    /// <remarks>
+    /// Used by clients that manage refresh tokens manually.
+    /// </remarks>
     [HttpPost("refresh-token")]
     public async Task<ActionResult<AuthResponse>> RefreshToken(
         RefreshTokenRequest model)
@@ -121,12 +117,11 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Refreshes an expired access token using the refresh token stored
-    /// inside the browser's HttpOnly cookie.
-    /// 
-    /// This endpoint is intended for web applications.
-    /// The browser automatically sends the refresh token cookie with the request.
+    /// Refreshes access tokens using the refresh token cookie.
     /// </summary>
+    /// <remarks>
+    /// Used by browser-based clients.
+    /// </remarks>
     [HttpPost("refresh-token-web")]
     public async Task<ActionResult<WebAuthResponse>> RefreshTokenWeb()
     {
@@ -164,10 +159,7 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Logs out a client by revoking the provided refresh token.
-    /// 
-    /// Intended for mobile applications where the refresh token
-    /// is stored and sent manually by the client.
+    /// Logs out a user and revokes the refresh token.
     /// </summary>
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(RefreshTokenRequest model)
@@ -179,8 +171,7 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Logs out a web user by revoking the refresh token stored in the browser cookie
-    /// and removing the cookie from the client.
+    /// Logs out a web user and removes the refresh token cookie.
     /// </summary>
     [HttpPost("logout-web")]
     public async Task<IActionResult> LogoutWeb()
@@ -209,10 +200,10 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// Sends a password reset email.
-    /// 
-    /// The endpoint always returns a successful response even when the email
-    /// does not exist to prevent attackers from discovering registered accounts.
     /// </summary>
+    /// <remarks>
+    /// Returns success even if the email is not registered.
+    /// </remarks>
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto model)
     {
@@ -223,7 +214,7 @@ public class AuthController : ControllerBase
 
 
     /// <summary>
-    /// Changes the user's password using the reset token received through email.
+    /// Resets the user's password using a reset token.
     /// </summary>
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
@@ -234,7 +225,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Generates a CSRF token required for cookie-based requests.
+    /// Generates a CSRF token for cookie-based authentication requests.
     /// </summary>
     [HttpGet("csrf-token")]
     public ActionResult<CsrfResponse> GetCsrfToken()
