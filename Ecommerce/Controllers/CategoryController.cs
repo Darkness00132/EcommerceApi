@@ -1,84 +1,241 @@
-﻿using Domain.Enums;
-using Application.DTOs.Category;
-using Application.DTOs.Product;
+﻿using Application.Common;
+using Application.Common.Pagination;
+using Application.Features.Category.CreateCategory;
+using Application.Features.Category.DeleteCategory;
+using Application.Features.Category.Dtos;
+using Application.Features.Category.GetCategories;
+using Application.Features.Category.GetProductsWithinCategory;
+using Application.Features.Category.UpdateCategory;
+using Application.Features.Product.Dto;
+using Domain.Enums;
+using Ecommerce.Api.Contracts.Category;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.Controllers
 {
-    [Route("api/categories")]
     [ApiController]
-    public class CategoryController : ControllerBase
+    [Route("api/categories")]
+    public sealed class CategoryController : ControllerBase
     {
-        /// <summary>
-        /// Gets all categories.
-        /// </summary>
-        /// <returns>List of categories.</returns>
-        [HttpGet]
-        public Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
+        private readonly ISender _sender;
+
+        public CategoryController(ISender sender)
         {
-            throw new NotImplementedException();
+            _sender = sender;
         }
 
-
         /// <summary>
-        /// Gets products by category.
-        /// </summary>
-        /// <param name="id">Category ID.</param>
-        /// <returns>List of products.</returns>
-        [HttpGet("{id}/products")]
-        public Task<ActionResult<IEnumerable<ProductDto>>> GetProductsWithinCategory(int id)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        /// <summary>
-        /// Creates a category.
+        /// Retrieves a paginated list of categories.
         /// </summary>
         /// <remarks>
-        /// Requires admin authorization.
+        /// Supports pagination and any filtering or sorting options defined by
+        /// <see cref="GetCategoriesQuery"/>.
         /// </remarks>
-        /// <param name="dto">Category data.</param>
-        /// <returns>Created category.</returns>
+        /// <param name="query">
+        /// The pagination, filtering, and sorting parameters.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Cancels the operation if the HTTP request is aborted.
+        /// </param>
+        /// <returns>
+        /// A paginated collection of categories.
+        /// </returns>
+        [HttpGet]
+        [ProducesResponseType(
+            typeof(PaginationResult<CategoryResponse>),
+            StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PaginationResult<CategoryResponse>>>
+            GetCategories(
+                [FromQuery] GetCategoriesQuery query,
+                CancellationToken cancellationToken)
+        {
+            var result = await _sender.Send(
+                query,
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Retrieves the products that belong to a category.
+        /// </summary>
+        /// <param name="id">
+        /// The identifier of the category.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Cancels the operation if the HTTP request is aborted.
+        /// </param>
+        /// <returns>
+        /// The products associated with the specified category.
+        /// </returns>
+        [HttpGet("{id:int}/products")]
+        [ProducesResponseType(
+            typeof(IReadOnlyList<ProductItemResponse>),
+            StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IReadOnlyList<ProductItemResponse>>>
+            GetProductsWithinCategory(
+                [FromRoute] int id,
+                CancellationToken cancellationToken)
+        {
+            var query = new GetProductsWithinCategoryQuery(id);
+
+            var products = await _sender.Send(
+                query,
+                cancellationToken);
+
+            return Ok(products);
+        }
+
+        /// <summary>
+        /// Creates a new category.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint requires the administrator role.
+        ///
+        /// The request must use <c>multipart/form-data</c> because it can include
+        /// an uploaded category image.
+        /// </remarks>
+        /// <param name="request">
+        /// The category information and optional image.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Cancels the operation if the HTTP request is aborted.
+        /// </param>
+        /// <returns>
+        /// A 201 Created response when the category is created successfully.
+        /// </returns>
         [Authorize(Roles = nameof(UserRoles.Admin))]
         [HttpPost]
-        public Task<IActionResult> CreateCategory([FromForm] CreateCategory dto)
+        [Consumes("multipart/form-data")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> CreateCategory(
+            [FromForm] CreateCategoryRequest request,
+            CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-        }
+            FileDto? image = request.Image is null
+                ? null
+                : new FileDto(
+                    request.Image.OpenReadStream(),
+                    request.Image.ContentType,
+                    request.Image.FileName);
 
+            var command = new CreateCategoryCommand(
+                request.NameEn,
+                request.NameAr,
+                request.DescriptionEn,
+                request.DescriptionAr,
+                image);
+
+            await _sender.Send(
+                command,
+                cancellationToken);
+
+            // The command doesn't return the category ID, so no resource
+            // location is included in the response.
+            return StatusCode(StatusCodes.Status201Created);
+        }
 
         /// <summary>
-        /// Updates a category.
+        /// Updates an existing category.
         /// </summary>
         /// <remarks>
-        /// Requires admin authorization.
+        /// This endpoint requires the administrator role.
+        ///
+        /// The request must use <c>multipart/form-data</c> because it can include
+        /// a replacement category image.
         /// </remarks>
-        /// <param name="id">Category ID.</param>
-        /// <param name="dto">Updated category data.</param>
-        /// <returns>No content.</returns>
+        /// <param name="id">
+        /// The identifier of the category to update.
+        /// </param>
+        /// <param name="request">
+        /// The updated category information and optional replacement image.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Cancels the operation if the HTTP request is aborted.
+        /// </param>
+        /// <returns>
+        /// A 204 No Content response when the category is updated successfully.
+        /// </returns>
         [Authorize(Roles = nameof(UserRoles.Admin))]
-        [HttpPut("{id}")]
-        public Task<IActionResult> UpdateCategory(int id, [FromForm] UpdateCategory dto)
+        [HttpPut("{id:int}")]
+        [Consumes("multipart/form-data")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> UpdateCategory(
+            [FromRoute] int id,
+            [FromForm] UpdateCategoryRequest request,
+            CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
-        }
+            FileDto? image = request.Image is null
+                ? null
+                : new FileDto(
+                    request.Image.OpenReadStream(),
+                    request.Image.ContentType,
+                    request.Image.FileName);
 
+            var command = new UpdateCategoryCommand(
+                id,
+                request.NameEn,
+                request.NameAr,
+                request.DescriptionEn,
+                request.DescriptionAr,
+                image);
+
+            await _sender.Send(
+                command,
+                cancellationToken);
+
+            return NoContent();
+        }
 
         /// <summary>
         /// Deletes a category.
         /// </summary>
         /// <remarks>
-        /// Requires admin authorization.
+        /// This endpoint requires the administrator role.
+        ///
+        /// Deletion may be rejected when the category is referenced by products
+        /// or other protected resources.
         /// </remarks>
-        /// <param name="id">Category ID.</param>
-        /// <returns>No content.</returns>
+        /// <param name="id">
+        /// The identifier of the category to delete.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Cancels the operation if the HTTP request is aborted.
+        /// </param>
+        /// <returns>
+        /// A 204 No Content response when the category is deleted successfully.
+        /// </returns>
         [Authorize(Roles = nameof(UserRoles.Admin))]
-        [HttpDelete("{id}")]
-        public Task<IActionResult> DeleteCategory(int id)
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> DeleteCategory(
+            [FromRoute] int id,
+            CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var command = new DeleteCategoryCommand(id);
+
+            await _sender.Send(
+                command,
+                cancellationToken);
+
+            return NoContent();
         }
     }
 }

@@ -1,10 +1,15 @@
+using Application;
+using Application.Common.Behavior;
 using Application.Interfaces.Services;
+using Application.Services;
+using Application.Settings;
 using Domain.Entities;
 using Domain.Enums;
-using Ecommerce.Services;
-using Infrastructure;
+using FluentValidation;
+using Infrastructure.Persistence;
 using Infrastructure.Services;
 using Infrastructure.Settings;
+using Infrastructure.ThirdPartyServices;
 using Infrastructure.ThirdPartyServices.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -166,13 +171,20 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 #region Register Services
 
+builder.Services.AddMediatR(config =>
+{
+    config.RegisterServicesFromAssembly(typeof(AssemblyReference).Assembly);
+    config.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssemblies(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
 builder.Services.AddMemoryCache(config => config.SizeLimit = 1024);
 
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuthenticationResultFactory>();
 
 builder.Services.AddScoped<IJwtService,JwtService>();
 builder.Services.AddScoped<IRefreshTokenService,RefreshTokenService>();
+
 builder.Services.AddSingleton<RazorService>();
 builder.Services.AddTransient<IEmailService , EmailService>();
 //builder.Services.AddScoped<>();

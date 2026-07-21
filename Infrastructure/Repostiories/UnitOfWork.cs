@@ -1,4 +1,6 @@
-﻿namespace Infrastructure.Repostiories
+﻿using Infrastructure.Persistence;
+
+namespace Infrastructure.Repostiories
 {
     public class UnitOfWork
     {
