@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Application.Common.Exceptions;
+using FluentValidation;
 using MediatR;
 
 namespace Application.Common.Behavior
@@ -28,7 +29,8 @@ namespace Application.Common.Behavior
 
             if (failures.Any())
             {
-                throw new ValidationException(failures);
+                var errorMessage = string.Join("; ", failures.Select(f => f.ErrorMessage));
+                throw new BadRequestException(errorMessage);
             }
 
             return await next();

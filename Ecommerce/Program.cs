@@ -6,12 +6,14 @@ using Application.Settings;
 using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
+using Hangfire;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
 using Infrastructure.Settings;
 using Infrastructure.ThirdPartyServices;
 using Infrastructure.ThirdPartyServices.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -178,6 +180,17 @@ builder.Services.AddMediatR(config =>
 });
 builder.Services.AddValidatorsFromAssemblies(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfireServer(options => options.Queues = new[]
+{
+    BackgroundJopPriority.Critical.ToString().ToLowerInvariant(),
+    BackgroundJopPriority.Default.ToString().ToLowerInvariant(),
+    BackgroundJopPriority.Low.ToString().ToLowerInvariant()
+});
 builder.Services.AddMemoryCache(config => config.SizeLimit = 1024);
 
 builder.Services.AddScoped<AuthenticationResultFactory>();
@@ -187,6 +200,7 @@ builder.Services.AddScoped<IRefreshTokenService,RefreshTokenService>();
 
 builder.Services.AddSingleton<RazorService>();
 builder.Services.AddTransient<IEmailService , EmailService>();
+builder.Services.AddScoped<IBackgroundJobService, HangFireService>();
 //builder.Services.AddScoped<>();
 
 #endregion
@@ -218,6 +232,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHangfireDashboard()
+    .RequireAuthorization(new AuthorizeAttribute { Roles = UserRoles.Admin.ToString() });
 
 #region initalize roles
 using var scope = app.Services.CreateScope();

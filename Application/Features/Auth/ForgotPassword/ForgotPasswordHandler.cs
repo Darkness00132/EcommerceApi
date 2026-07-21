@@ -2,6 +2,7 @@
 using Application.Interfaces.Services;
 using Application.Settings;
 using Domain.Entities;
+using Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -13,13 +14,15 @@ namespace Application.Features.Auth.ForgotPassword
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly FrontendSettings _frontendSettings;
+        private readonly IBackgroundJobService _backgroundJobService;
         private readonly IEmailService _emailService;
         private readonly ILogger<ForgotPasswordHandler> _logger;
 
-        public ForgotPasswordHandler(UserManager<AppUser> userManager, IOptions<FrontendSettings> frontendSettings, IEmailService emailService, ILogger<ForgotPasswordHandler> logger)
+        public ForgotPasswordHandler(UserManager<AppUser> userManager, IOptions<FrontendSettings> frontendSettings, IBackgroundJobService backgroundJobService, IEmailService emailService, ILogger<ForgotPasswordHandler> logger)
         {
             _userManager = userManager;
             _frontendSettings = frontendSettings.Value;
+            _backgroundJobService = backgroundJobService;
             _emailService = emailService;
             _logger = logger;
         }
@@ -41,7 +44,7 @@ namespace Application.Features.Auth.ForgotPassword
 
             var link = $"{_frontendSettings.BaseUrl}/auth/reset-password?email={request.Email}&token={Uri.EscapeDataString(token)}";
 
-            await _emailService.SendAsync(
+            _backgroundJobService.Enqueue(()=> _emailService.SendAsync(
                 request.Email,
                 "Reset your password",
                 "ResetPassword",
@@ -49,7 +52,7 @@ namespace Application.Features.Auth.ForgotPassword
                 {
                     FirstName = user.FirstName,
                     ResetLink = link
-                });
+                }),BackgroundJopPriority.Critical);
 
             _logger.LogInformation(
                 "Password reset email sent to user {UserId}.",

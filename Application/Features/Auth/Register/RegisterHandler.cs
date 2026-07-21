@@ -15,13 +15,15 @@ namespace Application.Features.Auth.Register
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly FrontendSettings _frontendSettings;
+        private readonly IBackgroundJobService _backgroundJobService;
         private readonly IEmailService _emailService;
         private readonly ILogger<RegisterHandler> _logger;
 
-        public RegisterHandler(UserManager<AppUser> userManager, IOptions<FrontendSettings> settings, IEmailService emailService, ILogger<RegisterHandler> logger)
+        public RegisterHandler(UserManager<AppUser> userManager, IOptions<FrontendSettings> frontendSettings, IBackgroundJobService backgroundJobService, IEmailService emailService, ILogger<RegisterHandler> logger)
         {
             _userManager = userManager;
-            _frontendSettings = settings.Value;
+            _frontendSettings = frontendSettings.Value;
+            _backgroundJobService = backgroundJobService;
             _emailService = emailService;
             _logger = logger;
         }
@@ -59,7 +61,7 @@ namespace Application.Features.Auth.Register
             var link = $"{_frontendSettings.BaseUrl}/auth/confirm-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
 
-            await _emailService.SendAsync(
+            _backgroundJobService.Enqueue(() => _emailService.SendAsync(
                 user.Email!,
                 "Confirm your email",
                 "ConfirmEmail",
@@ -67,7 +69,7 @@ namespace Application.Features.Auth.Register
                 {
                     FirstName = user.FirstName,
                     ConfirmationLink = link
-                });
+                }), BackgroundJopPriority.Critical);
 
             _logger.LogInformation("User {UserId} registered successfully with email {Email}.",
                 user.Id,
