@@ -1,8 +1,10 @@
-﻿using Infrastructure.Persistence;
+﻿using Application.Interfaces.Repositories;
+using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Infrastructure.Repostiories
 {
-    public class UnitOfWork
+    public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
 
@@ -11,24 +13,15 @@ namespace Infrastructure.Repostiories
             _context = context;
         }
 
-        public async Task SaveChangesAsync() 
+        public async Task SaveChangesAsync(CancellationToken ct = default) 
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(ct);
         }
 
-        public async Task BeginTransaction()
-        {
-            await _context.Database.BeginTransactionAsync();
-        }
 
-        public async Task CommitAsync()
+        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
         {
-            await _context.Database.CommitTransactionAsync();
-        }
-
-        public async Task RollBackAsync()
-        {
-            await _context.Database.RollbackTransactionAsync();
+            return await _context.Database.BeginTransactionAsync(ct);
         }
     }
 }

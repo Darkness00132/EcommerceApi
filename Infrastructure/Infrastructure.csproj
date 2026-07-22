@@ -7,7 +7,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="ThirdPartyServices\Email\Templates\**\*.cshtml" />
+		<EmbeddedResource Include="Services\Email\Templates\**\*.cshtml" />
 	</ItemGroup>
 
   <ItemGroup>
@@ -21,6 +21,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="RazorLight" Version="2.3.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>

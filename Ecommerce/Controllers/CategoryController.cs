@@ -7,6 +7,7 @@ using Application.Features.Category.GetCategories;
 using Application.Features.Category.GetProductsWithinCategory;
 using Application.Features.Category.UpdateCategory;
 using Application.Features.Product.Dto;
+using AutoMapper;
 using Domain.Enums;
 using Ecommerce.Api.Contracts.Category;
 using MediatR;
@@ -19,6 +20,7 @@ namespace Ecommerce.Controllers
     [Route("api/categories")]
     public sealed class CategoryController : ControllerBase
     {
+        private readonly IMapper _mapper;
         private readonly ISender _sender;
 
         public CategoryController(ISender sender)
@@ -49,9 +51,10 @@ namespace Ecommerce.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PaginationResult<CategoryResponse>>>
             GetCategories(
-                [FromQuery] GetCategoriesQuery query,
+                [FromQuery] PaginationRequest request,
                 CancellationToken cancellationToken)
         {
+            var query = new GetCategoriesQuery(request);
             var result = await _sender.Send(
                 query,
                 cancellationToken);
@@ -71,7 +74,7 @@ namespace Ecommerce.Controllers
         /// <returns>
         /// The products associated with the specified category.
         /// </returns>
-        [HttpGet("{id:int}/products")]
+        [HttpGet("{id}/products")]
         [ProducesResponseType(
             typeof(IReadOnlyList<ProductItemResponse>),
             StatusCodes.Status200OK)]
@@ -79,9 +82,10 @@ namespace Ecommerce.Controllers
         public async Task<ActionResult<IReadOnlyList<ProductItemResponse>>>
             GetProductsWithinCategory(
                 [FromRoute] int id,
+                [FromQuery] PaginationRequest pagination,
                 CancellationToken cancellationToken)
         {
-            var query = new GetProductsWithinCategoryQuery(id);
+            var query = new GetProductsWithinCategoryQuery(id, pagination);
 
             var products = await _sender.Send(
                 query,
@@ -120,20 +124,7 @@ namespace Ecommerce.Controllers
             [FromForm] CreateCategoryRequest request,
             CancellationToken cancellationToken)
         {
-            FileDto? image = request.Image is null
-                ? null
-                : new FileDto(
-                    request.Image.OpenReadStream(),
-                    request.Image.ContentType,
-                    request.Image.FileName);
-
-            var command = new CreateCategoryCommand(
-                request.NameEn,
-                request.NameAr,
-                request.DescriptionEn,
-                request.DescriptionAr,
-                image);
-
+            var command = _mapper.Map<CreateCategoryRequest, CreateCategoryCommand>(request);
             await _sender.Send(
                 command,
                 cancellationToken);
@@ -165,7 +156,7 @@ namespace Ecommerce.Controllers
         /// A 204 No Content response when the category is updated successfully.
         /// </returns>
         [Authorize(Roles = nameof(UserRoles.Admin))]
-        [HttpPut("{id:int}")]
+        [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -178,20 +169,7 @@ namespace Ecommerce.Controllers
             [FromForm] UpdateCategoryRequest request,
             CancellationToken cancellationToken)
         {
-            FileDto? image = request.Image is null
-                ? null
-                : new FileDto(
-                    request.Image.OpenReadStream(),
-                    request.Image.ContentType,
-                    request.Image.FileName);
-
-            var command = new UpdateCategoryCommand(
-                id,
-                request.NameEn,
-                request.NameAr,
-                request.DescriptionEn,
-                request.DescriptionAr,
-                image);
+            var command = _mapper.Map<UpdateCategoryRequest, UpdateCategoryCommand>(request);
 
             await _sender.Send(
                 command,
@@ -219,7 +197,7 @@ namespace Ecommerce.Controllers
         /// A 204 No Content response when the category is deleted successfully.
         /// </returns>
         [Authorize(Roles = nameof(UserRoles.Admin))]
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]

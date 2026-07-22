@@ -2,7 +2,7 @@
 using Microsoft.CodeAnalysis;
 using RazorLight;
 
-namespace Infrastructure.ThirdPartyServices
+namespace Infrastructure.Services
 {
     public class RazorService
     {

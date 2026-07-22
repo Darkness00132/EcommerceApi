@@ -3,7 +3,7 @@ using Domain.Enums;
 using Hangfire;
 using System.Linq.Expressions;
 
-namespace Infrastructure.ThirdPartyServices
+namespace Infrastructure.Services
 {
     public class HangFireService : IBackgroundJobService
     {

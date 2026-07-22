@@ -1,5 +1,6 @@
 using Application;
 using Application.Common.Behavior;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Services;
 using Application.Settings;
@@ -8,10 +9,10 @@ using Domain.Enums;
 using FluentValidation;
 using Hangfire;
 using Infrastructure.Persistence;
+using Infrastructure.Repostiories;
 using Infrastructure.Services;
+using Infrastructure.Services.Email;
 using Infrastructure.Settings;
-using Infrastructure.ThirdPartyServices;
-using Infrastructure.ThirdPartyServices.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -50,6 +51,11 @@ builder.Host.UseSerilog();
 #endregion
 
 #region Database
+
+builder.Services.AddStackExchangeRedisCache(options => 
+{ 
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -177,6 +183,7 @@ builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(AssemblyReference).Assembly);
     config.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    config.AddOpenBehavior(typeof(CachingBehavior<,>));
 });
 builder.Services.AddValidatorsFromAssemblies(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
@@ -198,9 +205,17 @@ builder.Services.AddScoped<AuthenticationResultFactory>();
 builder.Services.AddScoped<IJwtService,JwtService>();
 builder.Services.AddScoped<IRefreshTokenService,RefreshTokenService>();
 
+
 builder.Services.AddSingleton<RazorService>();
+builder.Services.AddScoped<IStorageService,StorageService>();
+builder.Services.AddScoped<IImageProcessor, ImageProcessor>();
 builder.Services.AddTransient<IEmailService , EmailService>();
 builder.Services.AddScoped<IBackgroundJobService, HangFireService>();
+
+//repositories
+builder.Services.AddScoped<IUnitOfWork,UnitOfWork>();
+builder.Services.AddScoped<ICategoryRepository,CategoryRepository>();
+builder.Services.AddScoped<IProductRepository,ProductRepository>();
 //builder.Services.AddScoped<>();
 
 #endregion
@@ -220,20 +235,21 @@ else
 {
     app.UseExceptionHandler();
     app.UseHsts();
-    app.UseHttpsRedirection();
 }
 
 app.UseSerilogRequestLogging();
 
+app.UseHttpsRedirection();
+
 app.UseCors();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseStaticFiles();
 
-app.MapHangfireDashboard()
+app.MapControllers();
+app.MapHangfireDashboard("/hangfire")
     .RequireAuthorization(new AuthorizeAttribute { Roles = UserRoles.Admin.ToString() });
 
 #region initalize roles

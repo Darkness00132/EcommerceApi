@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.Services;
+using Infrastructure.Services;
 using Infrastructure.Settings;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
-namespace Infrastructure.ThirdPartyServices.Email;
+namespace Infrastructure.Services.Email;
 
 public class EmailService : IEmailService
 {

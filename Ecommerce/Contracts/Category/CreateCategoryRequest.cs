@@ -4,5 +4,5 @@
          string NameAr,
          string? DescriptionEn,
          string? DescriptionAr,
-         IFormFile Image);
+         IFormFile? Image);
 }

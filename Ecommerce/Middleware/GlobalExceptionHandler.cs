@@ -17,11 +17,18 @@ internal sealed class GlobalExceptionHandler(
             ForbbidenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             BadRequestException => (StatusCodes.Status400BadRequest, "Bad Request"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+            OperationCanceledException => (499, "Client Closed Request"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 
         if (status == StatusCodes.Status500InternalServerError)
-            logger.LogError(exception, "Unhandled exception occurred");
+        {
+            logger.LogError(exception, "Unhandled internal server error occurred: {Message}", exception.Message);
+        }
+        else if (exception is OperationCanceledException)
+        {
+            logger.LogInformation("Request was canceled before completion: {Path}", context.Request.Path);
+        }
 
         var detail = status == StatusCodes.Status500InternalServerError
             ? env.IsDevelopment()
