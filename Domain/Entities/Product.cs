@@ -14,19 +14,21 @@
         public int Stock { get; set; }
 
         public string Brand { get; set; } = null!;
-        public string? ImageUrl { get; set; }
 
         public bool IsActive { get; set; } = true;
 
         public int CategoryId { get; set; }
         public Category Category { get; set; } = null!;
 
+        public int? DiscountId { get; set; }
+        public Discount? Discount { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
+        public ICollection<ProductImage> Images { get; set; } = [];
         public ICollection<CartItem> CartItems { get; set; } = [];
         public ICollection<OrderItem> OrderItems { get; set; } = [];
         public ICollection<Review> Reviews { get; set; } = [];
-        public ICollection<Discount> Discounts { get; set; } = [];
     }
 }

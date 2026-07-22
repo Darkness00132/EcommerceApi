@@ -15,6 +15,7 @@ namespace Infrastructure.Persistence
 
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Product> Products => Set<Product>();
+        public DbSet<ProductImage> ProductImages => Set<ProductImage>();
 
         public DbSet<Cart> Carts => Set<Cart>();
         public DbSet<CartItem> CartItems => Set<CartItem>();
@@ -34,92 +35,91 @@ namespace Infrastructure.Persistence
         {
             base.OnModelCreating(builder);
 
-            builder.Entity<AppUser>()
-                .HasOne(u => u.Cart)
-                .WithOne(c => c.User)
-                .HasForeignKey<Cart>(c => c.UserId);
-
-
-            builder.Entity<Product>()
-                .Property(p => p.Price)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Product>()
-                .HasIndex(p => p.SKU)
-                .IsUnique();
-
-
-            builder.Entity<Cart>()
-                .HasIndex(c => c.UserId)
-                .IsUnique();
-
+            builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
             builder.Entity<Order>()
-                .Property(o => o.Subtotal)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Order>()
-                .Property(o => o.DiscountAmount)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Order>()
-                .Property(o => o.Total)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<OrderItem>()
-                .Property(o => o.UnitPrice)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<CartItem>()
-                .Property(c => c.UnitPrice)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<Discount>()
-                .Property(d => d.Value)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<PromoCode>()
-                .HasIndex(p => p.Code)
-                .IsUnique();
-
-            builder.Entity<PromoCode>()
-                .Property(p => p.Value)
-                .HasPrecision(18, 2);
-
-            builder.Entity<PromoCode>()
-                .Property(p => p.MinimumOrder)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<Payment>()
-                .HasOne(p => p.Order)
-                .WithOne(o => o.Payment)
-                .HasForeignKey<Payment>(p => p.OrderId);
-
-            builder.Entity<Payment>()
-                .Property(p => p.Amount)
-                .HasPrecision(18, 2);
-
-
-            builder.Entity<Review>()
-                .HasIndex(r => new { r.UserId, r.ProductId })
-                .IsUnique();
-
-
-            builder.Entity<Order>()
-                .HasOne(o => o.User)
-                .WithMany(u => u.Orders)
+                .HasOne(o => o.PromoCodeNavigation)
+                .WithMany(p => p.Orders)
+                .HasForeignKey(o => o.PromoCode)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<Review>()
+                .HasOne(r => r.Product)
+                .WithMany(p => p.Reviews)
+                .HasForeignKey(r => r.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Review>()
                 .HasOne(r => r.User)
                 .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefreshToken>()
+                .HasOne(rt => rt.User)
+                .WithMany(u => u.RefreshTokens)
+                .HasForeignKey(rt => rt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Product>()
+                .HasMany(x => x.Images)
+                .WithOne(i => i.Product)
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.Product)
+                .WithMany(p => p.CartItems)
+                .HasForeignKey(ci => ci.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<OrderItem>()
+                .HasOne(oi => oi.Product)
+                .WithMany(p => p.OrderItems)
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<OrderItem>()
+                .HasOne(oi => oi.Order)
+                .WithMany(p => p.OrderItems)
+                .HasForeignKey(oi => oi.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Product>()
+                .HasOne(p => p.Discount)
+                .WithMany(d => d.Products)
+                .HasForeignKey(p => p.DiscountId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Cart>()
+                .HasOne(c => c.User)
+                .WithOne(u => u.Cart)
+                .HasForeignKey<Cart>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<CartItem>()
+                 .HasOne(ci => ci.Cart)
+                 .WithMany(p => p.CartItems)
+                 .HasForeignKey(ci => ci.CartId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.User)
+                .WithMany(u => u.Orders)
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Category>()
+                .HasMany(c => c.Products)
+                .WithOne(p => p.Category)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Payment>()
+                .HasOne(p => p.Order)
+                .WithOne(o => o.Payment)
+                .HasForeignKey<Payment>(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

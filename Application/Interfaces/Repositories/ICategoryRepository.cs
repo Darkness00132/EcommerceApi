@@ -8,7 +8,7 @@ namespace Application.Interfaces.Repositories
     {
         Task<PaginationResult<CategoryResponse>> GetAllCategories(PaginationRequest paginationRequest,CancellationToken ct=default);
 
-        Task<Category> GetCategoryWithTrackingAsync(int id, CancellationToken ct = default);
+        Task<Category?> GetCategoryWithTrackingAsync(int id, CancellationToken ct = default);
 
         Task CreateAsync(Category category, CancellationToken ct = default);
 

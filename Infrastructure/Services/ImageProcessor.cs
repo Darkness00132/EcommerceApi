@@ -49,7 +49,7 @@ namespace Infrastructure.Services
             // 7. Return updated FileDto
             return new FileDto(outputStream,
                 "image/webp",
-                Path.ChangeExtension(file.FileName, ".webp");
+                Path.ChangeExtension(file.FileName, ".webp"));
         }
     }
 }
