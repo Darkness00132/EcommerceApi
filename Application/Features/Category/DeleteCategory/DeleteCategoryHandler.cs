@@ -31,7 +31,7 @@ namespace Application.Features.Category.DeleteCategory
                 throw new NotFoundException("category not found");
             }
 
-            string? imageUrlToDelete = category.ImageUrl;
+            string? imageUrlToDelete = category.ImageKey;
 
             _categoryRepository.Delete(category);
 

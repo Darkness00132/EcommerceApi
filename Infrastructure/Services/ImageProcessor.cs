@@ -35,7 +35,8 @@ namespace Infrastructure.Services
             image.Mutate(x => x.Resize(new ResizeOptions
             {
                 Size = targetSize,
-                Mode = ResizeMode.Max
+                Mode = ResizeMode.Crop,
+                Position = AnchorPositionMode.Center
             }));
 
             // 5. Output memory stream for WebP conversion

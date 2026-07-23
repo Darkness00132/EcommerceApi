@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Application;
 using Application.Common.Behavior;
 using Application.Interfaces.Repositories;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -29,6 +31,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
+
+builder.Services.Configure<StorageSettings>(
+    builder.Configuration.GetSection("StorageSettings"));
 
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
@@ -185,20 +190,35 @@ builder.Services.AddMediatR(config =>
     config.AddOpenBehavior(typeof(ValidationBehavior<,>));
     config.AddOpenBehavior(typeof(CachingBehavior<,>));
 });
+
 builder.Services.AddValidatorsFromAssemblies(AppDomain.CurrentDomain.GetAssemblies());
+
 builder.Services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
+
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddHangfireServer(options => options.Queues = new[]
 {
     BackgroundJopPriority.Critical.ToString().ToLowerInvariant(),
     BackgroundJopPriority.Default.ToString().ToLowerInvariant(),
     BackgroundJopPriority.Low.ToString().ToLowerInvariant()
 });
-builder.Services.AddMemoryCache(config => config.SizeLimit = 1024);
+
+builder.Services.AddSingleton<IAmazonS3>(options =>
+{
+    var settings = options.GetRequiredService<IOptions<StorageSettings>>().Value;
+    var config = new AmazonS3Config
+    {
+        ServiceURL = settings.ServiceUrl,
+        AuthenticationRegion = settings.Region,
+        ForcePathStyle = true
+    };
+    return new AmazonS3Client(settings.AccessKey, settings.SecretKey, config);
+});
 
 builder.Services.AddScoped<AuthenticationResultFactory>();
 

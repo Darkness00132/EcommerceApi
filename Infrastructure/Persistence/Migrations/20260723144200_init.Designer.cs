@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260722233539_init")]
+    [Migration("20260723144200_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -138,9 +138,6 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
                     b.HasKey("UserId");
 
                     b.ToTable("Carts");
@@ -184,7 +181,7 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ImageKey")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -284,7 +281,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("PromoCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShippingAddress")
@@ -736,8 +732,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.PromoCode", "PromoCodeNavigation")
                         .WithMany("Orders")
                         .HasForeignKey("PromoCode")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.AppUser", "User")
                         .WithMany("Orders")

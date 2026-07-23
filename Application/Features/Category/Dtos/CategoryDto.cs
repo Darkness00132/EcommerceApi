@@ -1,9 +1,11 @@
 ﻿namespace Application.Features.Category.Dtos
 {
-    public record CategoryResponse(int Id,
+    public record CategoryDto(int Id,
         string NameEn,
         string NameAr,
         string? DescriptionEn,
-        string? DescriptionAr,
-        string? ImageUrl);
+        string? DescriptionAr)
+    {
+        public string? ImageUrl { get; set; }
+    }
 }

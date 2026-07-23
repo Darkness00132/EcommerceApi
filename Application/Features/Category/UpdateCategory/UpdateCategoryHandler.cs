@@ -29,20 +29,20 @@ namespace Application.Features.Category.UpdateCategory
 
         public async Task Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
         {
-            var existedCategory = await _categoryRepository.GetCategoryWithTrackingAsync(request.id, cancellationToken);
+            var existedCategory = await _categoryRepository.GetCategoryWithTrackingAsync(request.Id, cancellationToken);
             if (existedCategory == null)
             {
                 throw new NotFoundException("category is deleted already");
             }
 
-            string? oldImageUrl = existedCategory.ImageUrl;
+            string? oldImageUrl = existedCategory.ImageKey;
             _mapper.Map(request, existedCategory);
 
             if (request.Image is not null)
             {
                 var image = await _imageProcessor.ProcessAsync(request.Image,
                     ImageType.Category);
-                existedCategory.ImageUrl = await _storageService.UploadAsync(image, "Categories");
+                existedCategory.ImageKey = await _storageService.UploadAsync(image, "Categories");
             }
 
             await _unitOfWork.SaveChangesAsync();

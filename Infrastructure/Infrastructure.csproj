@@ -11,6 +11,7 @@
 	</ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="4.0.101.4" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.24" />
     <PackageReference Include="MailKit" Version="4.17.0" />

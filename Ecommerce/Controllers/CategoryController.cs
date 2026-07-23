@@ -23,8 +23,9 @@ namespace Ecommerce.Controllers
         private readonly IMapper _mapper;
         private readonly ISender _sender;
 
-        public CategoryController(ISender sender)
+        public CategoryController(IMapper mapper, ISender sender)
         {
+            _mapper = mapper;
             _sender = sender;
         }
 
@@ -46,10 +47,10 @@ namespace Ecommerce.Controllers
         /// </returns>
         [HttpGet]
         [ProducesResponseType(
-            typeof(PaginationResult<CategoryResponse>),
+            typeof(PaginationResult<CategoryDto>),
             StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PaginationResult<CategoryResponse>>>
+        public async Task<ActionResult<PaginationResult<CategoryDto>>>
             GetCategories(
                 [FromQuery] PaginationRequest request,
                 CancellationToken cancellationToken)
@@ -124,7 +125,7 @@ namespace Ecommerce.Controllers
             [FromForm] CreateCategoryRequest request,
             CancellationToken cancellationToken)
         {
-            var command = _mapper.Map<CreateCategoryRequest, CreateCategoryCommand>(request);
+            var command = _mapper.Map<CreateCategoryCommand>(request);
             await _sender.Send(
                 command,
                 cancellationToken);
@@ -164,12 +165,10 @@ namespace Ecommerce.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public async Task<IActionResult> UpdateCategory(
-            [FromRoute] int id,
-            [FromForm] UpdateCategoryRequest request,
+        public async Task<IActionResult> UpdateCategory(int id,[FromForm] UpdateCategoryRequest request,
             CancellationToken cancellationToken)
         {
-            var command = _mapper.Map<UpdateCategoryRequest, UpdateCategoryCommand>(request);
+            var command = _mapper.Map<UpdateCategoryCommand>(request) with { Id = id };
 
             await _sender.Send(
                 command,

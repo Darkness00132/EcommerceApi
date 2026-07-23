@@ -4,7 +4,7 @@ using MediatR;
 namespace Application.Features.Category.UpdateCategory
 {
     public record UpdateCategoryCommand(
-        int id,
+        int Id,
         string? NameEn,
          string? NameAr,
          string? DescriptionEn,

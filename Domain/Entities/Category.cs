@@ -9,7 +9,7 @@
         public string? DescriptionEn { get; set; }
         public string? DescriptionAr { get; set; }
 
-        public string ImageUrl { get; set; } = null!;
+        public string ImageKey { get; set; } = null!;
 
         public ICollection<Product> Products { get; set; } = [];
     }

@@ -30,18 +30,18 @@ namespace Infrastructure.Repostiories
             _context.Categories.Remove(category);
         }
 
-        public async Task<PaginationResult<CategoryResponse>> GetAllCategories(PaginationRequest paginationRequest, CancellationToken ct = default)
+        public async Task<PaginationResult<CategoryDto>> GetAllCategories(PaginationRequest paginationRequest, CancellationToken ct = default)
         {
             var query = _context.Categories.AsNoTracking();
             var catergories = await query
                 .Skip((paginationRequest.PageNumber - 1) * paginationRequest.PageSize)
                 .Take(paginationRequest.PageSize)
-                .ProjectTo<CategoryResponse>(_mapperConfig)
+                .ProjectTo<CategoryDto>(_mapperConfig)
                 .ToListAsync(ct);
 
             var totalCount = await query.CountAsync(ct);
 
-            return new PaginationResult<CategoryResponse>(
+            return new PaginationResult<CategoryDto>(
                 catergories,
                 paginationRequest.PageNumber,
                 paginationRequest.PageSize,

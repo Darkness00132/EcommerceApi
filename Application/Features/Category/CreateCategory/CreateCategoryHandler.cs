@@ -46,7 +46,7 @@ public class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand>
                     ImageType.Category,
                     cancellationToken);
 
-                category.ImageUrl = await _storageService.UploadAsync(
+                category.ImageKey = await _storageService.UploadAsync(
                     processedImage,
                     "categories",
                     cancellationToken);
@@ -60,11 +60,11 @@ public class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand>
         catch
         {
             // If image was uploaded before failure, delete it reliably using CancellationToken.None
-            if (!string.IsNullOrEmpty(category.ImageUrl))
+            if (!string.IsNullOrEmpty(category.ImageKey))
             {
-                _logger.LogWarning("Rolling back uploaded image '{ImageUrl}' due to operation failure.", category.ImageUrl);
+                _logger.LogWarning("Rolling back uploaded image '{ImageUrl}' due to operation failure.", category.ImageKey);
 
-                await _storageService.DeleteAsync(category.ImageUrl, CancellationToken.None);
+                await _storageService.DeleteAsync(category.ImageKey, CancellationToken.None);
             }
             throw;
         }

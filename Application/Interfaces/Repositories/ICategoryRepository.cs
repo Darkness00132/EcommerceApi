@@ -6,7 +6,7 @@ namespace Application.Interfaces.Repositories
 {
     public interface ICategoryRepository
     {
-        Task<PaginationResult<CategoryResponse>> GetAllCategories(PaginationRequest paginationRequest,CancellationToken ct=default);
+        Task<PaginationResult<CategoryDto>> GetAllCategories(PaginationRequest paginationRequest,CancellationToken ct=default);
 
         Task<Category?> GetCategoryWithTrackingAsync(int id, CancellationToken ct = default);
 

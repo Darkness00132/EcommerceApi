@@ -8,7 +8,7 @@ namespace Application.Common.Mappers
     {
         public ProductMapping()
         {
-            CreateMap<Product, ProductItemResponse>().ReverseMap();
+            CreateMap<Product, ProductItemResponse>();
         }
     }
 }

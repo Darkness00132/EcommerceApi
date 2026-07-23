@@ -20,7 +20,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(c => c.DescriptionAr)
                 .HasMaxLength(500);
 
-            builder.Property(c => c.ImageUrl)
+            builder.Property(c => c.ImageKey)
                 .HasMaxLength(500);
         }
     }

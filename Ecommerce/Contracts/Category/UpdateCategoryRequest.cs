@@ -1,4 +1,6 @@
-﻿namespace Ecommerce.Api.Contracts.Category
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace Ecommerce.Api.Contracts.Category
 {
     public record UpdateCategoryRequest(
         string? NameEn,

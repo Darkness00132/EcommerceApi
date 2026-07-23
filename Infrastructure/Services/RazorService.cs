@@ -14,21 +14,24 @@ namespace Infrastructure.Services
             var applicationAssembly = typeof(AssemblyReference).Assembly;
 
             _razorEngine = new RazorLightEngineBuilder()
-                    .UseEmbeddedResourcesProject(
+                .UseEmbeddedResourcesProject(
                     infrastructureAssembly,
-                    "Infrastructure.ThirdPartyServices.Email.Templates")
-                    .SetOperatingAssembly(infrastructureAssembly)
-                    .AddMetadataReferences( MetadataReference.CreateFromFile(applicationAssembly.Location))
-                    .UseMemoryCachingProvider()
-                    .Build();
+                    "Infrastructure.Services.Email.Templates")
+                .SetOperatingAssembly(infrastructureAssembly)
+                .AddMetadataReferences(MetadataReference.CreateFromFile(applicationAssembly.Location))
+                .UseMemoryCachingProvider()
+                .EnableDebugMode()
+                .Build();
         }
 
-
-        public async Task<string> GetHtmlAsync<TModel>(
-            string templateName,
-            TModel model)
+        public async Task<string> GetHtmlAsync<TModel>(string templateName, TModel model)
         {
-            return await _razorEngine.CompileRenderAsync($"{templateName}.cshtml", model);
+            // Ensure .cshtml extension is present
+            string key = templateName.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
+                ? templateName
+                : $"{templateName}.cshtml";
+
+            return await _razorEngine.CompileRenderAsync(key, model);
         }
     }
 }

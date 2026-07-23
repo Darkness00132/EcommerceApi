@@ -64,7 +64,7 @@ namespace Infrastructure.Migrations
                     NameAr = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     DescriptionEn = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     DescriptionAr = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                    ImageKey = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -236,8 +236,7 @@ namespace Infrastructure.Migrations
                 name: "Carts",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -323,7 +322,7 @@ namespace Infrastructure.Migrations
                     ShippingAddress = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
                     ShippingCity = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ShippingPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    PromoCode = table.Column<string>(type: "nvarchar(50)", nullable: false),
+                    PromoCode = table.Column<string>(type: "nvarchar(50)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>

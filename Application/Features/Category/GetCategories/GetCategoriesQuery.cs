@@ -4,7 +4,7 @@ using Application.Interfaces;
 
 namespace Application.Features.Category.GetCategories
 {
-    public record GetCategoriesQuery(PaginationRequest Pagination) : ICacheableQuery<PaginationResult<CategoryResponse>>
+    public record GetCategoriesQuery(PaginationRequest Pagination) : ICacheableQuery<PaginationResult<CategoryDto>>
     {
         public string CacheKey => Pagination.PageNumber > 3
             ? string.Empty
