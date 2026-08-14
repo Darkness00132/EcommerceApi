@@ -1,0 +1,86 @@
+# =========================
+# Visual Studio / .NET
+# =========================
+
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+
+# Logs
+[Ll]og/
+[Ll]ogs/
+*.log
+
+# =========================
+# Visual Studio Code
+# =========================
+
+.vscode/
+
+# Keep workspace settings if you want to share them:
+# !.vscode/settings.json
+
+# =========================
+# .NET / NuGet
+# =========================
+
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# =========================
+# ASP.NET / App Configuration
+# =========================
+
+# Local configuration / secrets
+appsettings.Local.json
+
+# If appsettings.json contains secrets, ignore it too.
+# Otherwise, REMOVE this line and commit appsettings.json.
+appsettings.json
+
+# User secrets
+secrets.json
+
+# =========================
+# OS Files
+# =========================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# =========================
+# Temporary / Backup Files
+# =========================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# =========================
+# Environment Variables
+# =========================
+
+.env
+.env.*
+!.env.example

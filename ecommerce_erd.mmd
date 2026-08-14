@@ -1,0 +1,380 @@
+erDiagram
+
+%% ============================================
+%% IDENTITY AREA
+%% ============================================
+
+APP_USER {
+    Guid Id PK
+    string FirstName
+    string LastName
+    DateTime CreatedAt
+    string UserName "nullable"
+    string NormalizedUserName "nullable"
+    string Email "nullable"
+    string NormalizedEmail "nullable"
+    bool EmailConfirmed
+    string PasswordHash "nullable"
+    string SecurityStamp "nullable"
+    string ConcurrencyStamp "nullable"
+    string PhoneNumber "nullable"
+    bool PhoneNumberConfirmed
+    bool TwoFactorEnabled
+    DateTimeOffset LockoutEnd "nullable"
+    bool LockoutEnabled
+    int AccessFailedCount
+}
+
+APP_ROLE {
+    Guid Id PK
+    string Name "nullable"
+    string NormalizedName "nullable"
+    string ConcurrencyStamp "nullable"
+}
+
+REFRESH_TOKEN {
+    Guid Id PK
+    string Token UK "max 256"
+    DateTime ExpiresAt
+    DateTime CreatedAt
+    DateTime RevokedAt "nullable"
+    Guid UserId FK
+}
+
+
+%% ============================================
+%% CATALOG AREA
+%% ============================================
+
+CATEGORY {
+    Guid Id PK
+    string NameEn "max 100"
+    string NameAr "max 100"
+    string DescriptionEn "nullable, max 500"
+    string DescriptionAr "nullable, max 500"
+    string ImageKey "max 500"
+}
+
+BRAND {
+    Guid Id PK
+    string NameEn "max 100, unique"
+    string NameAr "max 100, unique"
+}
+
+PRODUCT {
+    Guid Id PK
+    string NameEn "max 200"
+    string NameAr "max 200"
+    string SKU UK "max 100"
+    string DescriptionEn "nullable, max 2000"
+    string DescriptionAr "nullable, max 2000"
+    decimal Price "decimal(18,2)"
+    bool IsActive
+    Guid CategoryId FK
+    Guid BrandId FK
+    Guid DiscountId FK "nullable"
+    DateTime CreatedAt
+    DateTime UpdatedAt "nullable"
+    byte_array RowVersion
+}
+
+PRODUCT_IMAGE {
+    Guid ProductId PK,FK
+    string ImageKey PK "max 400"
+}
+
+DISCOUNT {
+    Guid Id PK
+    string Name "max 100"
+    DiscountType DiscountType
+    decimal Value "decimal(18,4)"
+    DateOnly StartDate
+    DateOnly EndDate
+    bool IsActive
+}
+
+
+%% ============================================
+%% CART AREA
+%% ============================================
+
+CART {
+    Guid UserId PK,FK
+}
+
+CART_ITEM {
+    Guid CartId PK,FK
+    Guid ProductId PK,FK
+    int Quantity
+    decimal UnitPrice "decimal(18,2)"
+    decimal DiscountAmount "decimal(18,2)"
+}
+
+
+%% ============================================
+%% SALES ORDERS AREA
+%% ============================================
+
+ORDER {
+    Guid Id PK
+    Guid UserId FK
+    OrderStatus Status
+    decimal Subtotal "decimal(18,2)"
+    decimal ShippingFee "decimal(18,2)"
+    decimal ItemsDiscountAmount "decimal(18,2)"
+    decimal PromoDiscountAmount "decimal(18,2)"
+    decimal Total "decimal(18,2)"
+    string ShippingAddress "max 250"
+    string ShippingCity "max 100"
+    string ShippingPhone "max 20"
+    string DeliveryNotes "nullable, max 250"
+    Guid PromoCodeId FK "nullable"
+    DateTime CreatedAt
+}
+
+ORDER_ITEM {
+    Guid OrderId PK,FK
+    Guid ProductId PK,FK
+    int Quantity
+    decimal UnitPrice "decimal(18,2)"
+    decimal DiscountAmount "decimal(18,2)"
+}
+
+
+%% ============================================
+%% PAYMENTS AREA
+%% ============================================
+
+PAYMENT {
+    Guid Id PK
+    Guid OrderId FK,UK
+    PaymentStatus Status
+    decimal Amount "decimal(18,2)"
+    DateTime CreatedAt
+    DateTime PaidAt "nullable"
+    DateTime RefundedAt "nullable"
+    byte_array RowVersion
+}
+
+PAYMENT_ATTEMPT {
+    Guid Id PK
+    Guid PaymentId FK
+    PaymentMethod Method
+    PaymentAttemptStatus Status
+    decimal Amount "decimal(18,2)"
+    string TransactionId "nullable, max 100"
+    string GatewayResponse "nullable, max 2000"
+    DateTime CreatedAt
+    DateTime CompletedAt "nullable"
+    DateTime FailedAt "nullable"
+}
+
+
+%% ============================================
+%% PROMOTIONS AREA
+%% ============================================
+
+PROMO_CODE {
+    Guid Id PK
+    string Code UK "max 50"
+    PromoDiscountType DiscountType
+    decimal Value "decimal(18,4)"
+    decimal MinimumOrder "decimal(18,2)"
+    int UsageLimit "nullable"
+    int UsedCount
+    DateOnly StartDate
+    DateOnly ExpirationDate
+    bool IsActive
+    byte_array RowVersion
+}
+
+
+%% ============================================
+%% REVIEWS AREA
+%% ============================================
+
+REVIEW {
+    Guid Id PK
+    Guid UserId FK
+    Guid ProductId FK
+    int Rating
+    string Comment "nullable, max 1000"
+    DateTime CreatedAt
+}
+
+
+%% ============================================
+%% INVENTORY AREA
+%% ============================================
+
+INVENTORY {
+    Guid Id PK
+    Guid ProductId FK,UK
+    int QuantityOnHand
+    int ReorderLevel
+    byte_array RowVersion
+}
+
+INVENTORY_TRANSACTION {
+    Guid Id PK
+    Guid InventoryId FK
+    InventoryTransactionType Type
+    int QuantityChange
+    int QuantityBefore
+    int QuantityAfter
+    Guid OrderId FK "nullable"
+    Guid GoodsReceiptId FK "nullable"
+    string Notes "nullable, max 500"
+    DateTime CreatedAt
+}
+
+
+%% ============================================
+%% PROCUREMENT AREA
+%% ============================================
+
+SUPPLIER {
+    Guid Id PK
+    string Name
+    string ContactName "nullable"
+    string Email "nullable"
+    string Phone "nullable"
+    string Address "nullable"
+    string City "nullable"
+    string TaxNumber "nullable"
+    bool IsActive
+    DateTime CreatedAt
+    DateTime UpdatedAt "nullable"
+}
+
+PURCHASE_ORDER {
+    Guid Id PK
+    string Number UK "max 50"
+    Guid SupplierId FK
+    PurchaseOrderStatus Status
+    DateOnly OrderDate
+    DateOnly ExpectedDeliveryDate "nullable"
+    decimal Subtotal "decimal(18,2)"
+    decimal TaxAmount "decimal(18,2)"
+    decimal ShippingCost "decimal(18,2)"
+    decimal Total "decimal(18,2)"
+    string Notes "nullable, max 1000"
+    DateTime CreatedAt
+    DateTime ApprovedAt "nullable"
+    DateTime CompletedAt "nullable"
+    DateTime CancelledAt "nullable"
+    byte_array RowVersion
+}
+
+PURCHASE_ORDER_ITEM {
+    Guid PurchaseOrderId PK,FK
+    Guid ProductId PK,FK
+    int OrderedQuantity
+    int ReceivedQuantity
+    decimal UnitCost "decimal(18,2)"
+}
+
+GOODS_RECEIPT {
+    Guid Id PK
+    string Number "max 50"
+    Guid PurchaseOrderId FK
+    GoodsReceiptStatus Status
+    DateTime ReceivedAt
+    string DeliveryReference "nullable, max 100"
+    string Notes "nullable, max 1000"
+    DateTime CreatedAt
+    DateTime ConfirmedAt "nullable"
+    DateTime CancelledAt "nullable"
+}
+
+GOODS_RECEIPT_ITEM {
+    Guid GoodsReceiptId PK,FK
+    Guid ProductId PK,FK
+    int Quantity
+}
+
+
+%% ============================================
+%% NEWSLETTER AREA
+%% ============================================
+
+NEWSLETTER_SUBSCRIBER {
+    Guid Id PK
+    string Email UK "max 256"
+    bool IsSubscribed
+    DateTime CreatedAt
+}
+
+
+%% ============================================
+%% RELATIONSHIPS
+%% ============================================
+
+%% --------------------------------------------
+%% Identity
+%% --------------------------------------------
+
+APP_USER ||--o| CART : has
+APP_USER ||--o{ REFRESH_TOKEN : has
+APP_USER ||--o{ ORDER : places
+APP_USER ||--o{ REVIEW : writes
+
+
+%% --------------------------------------------
+%% Catalog
+%% --------------------------------------------
+
+CATEGORY ||--o{ PRODUCT : contains
+BRAND ||--o{ PRODUCT : has
+DISCOUNT o|--o{ PRODUCT : applies_to
+PRODUCT ||--|| INVENTORY : has
+PRODUCT ||--o{ PRODUCT_IMAGE : has
+PRODUCT ||--o{ CART_ITEM : included_in
+PRODUCT ||--o{ ORDER_ITEM : included_in
+PRODUCT ||--o{ REVIEW : receives
+PRODUCT ||--o{ PURCHASE_ORDER_ITEM : ordered
+PRODUCT ||--o{ GOODS_RECEIPT_ITEM : received
+
+
+%% --------------------------------------------
+%% Cart
+%% --------------------------------------------
+
+CART ||--o{ CART_ITEM : contains
+
+
+%% --------------------------------------------
+%% Sales Orders
+%% --------------------------------------------
+
+ORDER ||--o{ ORDER_ITEM : contains
+PROMO_CODE o|--o{ ORDER : applied_to
+ORDER ||--o| PAYMENT : has
+ORDER o|--o{ INVENTORY_TRANSACTION : causes
+
+
+%% --------------------------------------------
+%% Payments
+%% --------------------------------------------
+
+PAYMENT ||--o{ PAYMENT_ATTEMPT : has
+
+
+%% --------------------------------------------
+%% Inventory
+%% --------------------------------------------
+
+INVENTORY ||--o{ INVENTORY_TRANSACTION : records
+
+
+%% --------------------------------------------
+%% Procurement
+%% --------------------------------------------
+
+SUPPLIER ||--o{ PURCHASE_ORDER : receives_orders
+
+PURCHASE_ORDER ||--o{ PURCHASE_ORDER_ITEM : contains
+PURCHASE_ORDER ||--o{ GOODS_RECEIPT : receives
+
+GOODS_RECEIPT ||--o{ GOODS_RECEIPT_ITEM : contains
+GOODS_RECEIPT o|--o{ INVENTORY_TRANSACTION : causes

@@ -1,0 +1,90 @@
+# ==========================================
+# Git attributes for .NET / Visual Studio
+# ==========================================
+
+# Normalize line endings
+* text=auto
+
+# Source code
+*.cs text diff=csharp
+*.csx text diff=csharp
+*.fs text diff
+*.fsx text diff
+*.vb text diff
+
+# Project / solution files
+*.sln text
+*.slnx text
+*.csproj text
+*.fsproj text
+*.vbproj text
+*.props text
+*.targets text
+*.json text
+*.xml text
+*.config text
+
+# Web files
+*.html text
+*.htm text
+*.css text
+*.scss text
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.vue text
+
+# Documentation
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+
+# Shell / scripts
+*.sh text
+*.ps1 text
+*.bat text
+*.cmd text
+
+# Treat common binary files as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.bmp binary
+
+*.pdf binary
+
+*.zip binary
+*.7z binary
+*.rar binary
+*.gz binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Microsoft Office
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+
+# Database files
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# Certificates / keys
+*.pfx binary
+*.p12 binary
+*.cer binary
+*.crt binary
+*.key binary
