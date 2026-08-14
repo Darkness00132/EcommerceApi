@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Ecommerce.Api.Controllers;
+namespace Ecommerce.Api.Controllers.Admin;
 
 /// <summary>
 /// Provides administrator endpoints for managing brands.

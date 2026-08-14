@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace Application.Common.Validation;
 
-public static class ImageFileValidationExtensions
+internal static class ImageFileValidationExtensions
 {
     private static readonly HashSet<string> AllowedContentTypes =
     [

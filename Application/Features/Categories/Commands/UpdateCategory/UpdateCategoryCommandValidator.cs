@@ -7,6 +7,9 @@ internal class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategory
 {
     public UpdateCategoryCommandValidator()
     {
+        RuleFor(command => command)
+            .HasAtLeastOneValue(nameof(UpdateCategoryCommand.Id));
+
         RuleFor(command => command.NameEn)
             .MaximumLength(100);
 

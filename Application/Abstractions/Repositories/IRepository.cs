@@ -45,4 +45,6 @@ public interface IRepository<TEntity>
     Task AddAsync(
         TEntity entity,
         CancellationToken cancellationToken = default);
+
+    void Remove(TEntity entity);
 }

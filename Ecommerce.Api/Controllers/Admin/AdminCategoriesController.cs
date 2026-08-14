@@ -8,7 +8,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Ecommerce.Api.Controllers;
+namespace Ecommerce.Api.Controllers.Admin;
 
 /// <summary>
 /// Provides administrator endpoints for managing categories.
@@ -30,7 +30,7 @@ public sealed class AdminCategoriesController : ControllerBase
     /// <summary>
     /// Creates a new category.
     /// </summary>
-    /// <param name="command">The create category command.</param>
+    /// <param name="request">The create category request.</param>
     /// <param name="cancellationToken">A token used to cancel the request.</param>
     /// <returns>The created category identifier.</returns>
     /// <response code="201">The category was created successfully.</response>
