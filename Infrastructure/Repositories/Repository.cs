@@ -128,4 +128,9 @@ internal class Repository<TEntity> : IRepository<TEntity>
 
         return query;
     }
+
+    public void Remove(TEntity entity)
+    {
+        _dbSet.Remove(entity);
+    }
 }

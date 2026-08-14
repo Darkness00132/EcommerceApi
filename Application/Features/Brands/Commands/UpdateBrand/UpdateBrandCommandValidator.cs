@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using Application.Common.Validation;
+using FluentValidation;
 
 namespace Application.Features.Brands.Commands.UpdateBrand;
 
@@ -6,6 +7,8 @@ internal class UpdateBrandCommandValidator : AbstractValidator<UpdateBrandComman
 {
     public UpdateBrandCommandValidator()
     {
+        RuleFor(command => command)
+            .HasAtLeastOneValue(nameof(UpdateBrandCommand.Id));
 
         RuleFor(command => command.NameEn)
             .MaximumLength(100);
