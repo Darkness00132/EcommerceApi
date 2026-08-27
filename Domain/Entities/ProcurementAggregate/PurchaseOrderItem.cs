@@ -1,6 +1,7 @@
-﻿using Domain.Common;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.ProcurementAggregate;
 
@@ -18,10 +19,12 @@ public sealed class PurchaseOrderItem : Entity
 
     public int ReceivedQuantity { get; private set; }
 
+    [Precision(18,2)]
     public decimal UnitCost { get; private set; }
 
     private PurchaseOrderItem() { }
-    public PurchaseOrderItem(
+
+    internal PurchaseOrderItem(
         Guid purchaseOrderId,
         Guid productId,
         int orderedQuantity,
@@ -35,33 +38,40 @@ public sealed class PurchaseOrderItem : Entity
             throw new DomainException("Product id is required.");
 
         if (orderedQuantity <= 0)
-            throw new DomainException("Ordered quantity must be greater than zero.");
+            throw new DomainException(
+                "Ordered quantity must be greater than zero.");
 
         if (unitCost < 0)
-            throw new DomainException("Unit cost cannot be negative.");
+            throw new DomainException(
+                "Unit cost cannot be negative.");
 
         PurchaseOrderId = purchaseOrderId;
         ProductId = productId;
         OrderedQuantity = orderedQuantity;
-        ReceivedQuantity = 0;
         UnitCost = unitCost;
     }
 
-    public void IncreaseOrderedQuantity(int quantity)
+    internal void IncreaseOrderedQuantity(int quantity)
     {
-        if (quantity <= 0)
-            throw new DomainException("Quantity must be greater than zero.");
+        if (quantity <= 0) {
+            throw new DomainException(
+                "Quantity must be greater than zero.");
+        }
 
         OrderedQuantity += quantity;
     }
 
-    public void Receive(int quantity)
+    internal void Receive(int quantity)
     {
-        if (quantity <= 0)
-            throw new DomainException("Received quantity must be greater than zero.");
+        if (quantity <= 0) {
+            throw new DomainException(
+                "Received quantity must be greater than zero.");
+        }
 
-        if (ReceivedQuantity + quantity > OrderedQuantity)
-            throw new DomainException("Received quantity cannot exceed ordered quantity.");
+        if (ReceivedQuantity + quantity > OrderedQuantity) {
+            throw new DomainException(
+                "Received quantity cannot exceed ordered quantity.");
+        }
 
         ReceivedQuantity += quantity;
     }

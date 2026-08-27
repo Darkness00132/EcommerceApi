@@ -1,4 +1,4 @@
-﻿using Domain.Entities.ProcurementAggregate;
+using Domain.Entities.ProcurementAggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -161,10 +161,12 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DescriptionAr")
+                        .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("DescriptionEn")
+                        .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
@@ -1156,7 +1158,7 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.InventoryAggregate.Inventory", b =>
                 {
                     b.HasOne("Domain.Entities.Catalog.Product", "Product")
-                        .WithOne()
+                        .WithOne("Inventory")
                         .HasForeignKey("Domain.Entities.InventoryAggregate.Inventory", "ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1457,6 +1459,9 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Catalog.Product", b =>
                 {
                     b.Navigation("Images");
+
+                    b.Navigation("Inventory")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Entities.Identity.AppUser", b =>

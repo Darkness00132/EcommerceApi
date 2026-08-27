@@ -1,36 +1,35 @@
-﻿using Application.Abstractions.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Application.Abstractions.Repositories;
 using AutoMapper;
 using Domain.Entities.Catalog;
 using Domain.ValueObjects;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Application.Features.Discounts.Commands.CreateDiscount
+namespace Application.Features.Discounts.Commands.CreateDiscount;
+
+internal class CreateDiscountHandler : IRequestHandler<CreateDiscountCommand, Guid>
 {
-    internal class CreateDiscountHandler : IRequestHandler<CreateDiscountCommand, Guid>
+    private readonly IRepository<Discount> _discountRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CreateDiscountHandler(IRepository<Discount> discountRepository, IUnitOfWork unitOfWork)
     {
-        private readonly IRepository<Discount> _discountRepository;
-        private readonly IUnitOfWork _unitOfWork;
+        _discountRepository = discountRepository;
+        _unitOfWork = unitOfWork;
+    }
 
-        public CreateDiscountHandler(IRepository<Discount> discountRepository, IUnitOfWork unitOfWork)
-        {
-            _discountRepository = discountRepository;
-            _unitOfWork = unitOfWork;
-        }
+    public async Task<Guid> Handle(CreateDiscountCommand request, CancellationToken cancellationToken)
+    {
+        var discount = new Discount(request.Name,
+            request.DiscountType,
+            request.Value,
+            new DateRange(request.StartDate, request.EndDate));
 
-        public async Task<Guid> Handle(CreateDiscountCommand request, CancellationToken cancellationToken)
-        {
-            var discount = new Discount(request.Name,
-                request.DiscountType,
-                request.Value,
-                new DateRange(request.StartDate,request.EndDate));
+        await _discountRepository.AddAsync(discount, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _discountRepository.AddAsync(discount,cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return discount.Id;
-        }
+        return discount.Id;
     }
 }

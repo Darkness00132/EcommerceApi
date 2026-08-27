@@ -1,4 +1,4 @@
-﻿using Domain.Entities.ProcurementAggregate;
+using Domain.Entities.ProcurementAggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,8 +10,5 @@ public sealed class PurchaseOrderItemConfiguration : IEntityTypeConfiguration<Pu
     {
         builder.HasIndex(x => new { x.PurchaseOrderId, x.ProductId })
             .IsUnique();
-
-        builder.Property(x => x.UnitCost)
-            .HasPrecision(18, 2);
     }
 }

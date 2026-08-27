@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 namespace Application.Abstractions;
 
@@ -9,7 +9,7 @@ public interface ICacheInvalidatingCommand<TResponse> : IRequest<TResponse>
     IReadOnlyCollection<string> CacheTags { get; }
 }
 
-public interface ICacheInvalidatingCommand: IRequest
+public interface ICacheInvalidatingCommand : IRequest
 {
     IReadOnlyCollection<string> CacheKeys { get; }
 

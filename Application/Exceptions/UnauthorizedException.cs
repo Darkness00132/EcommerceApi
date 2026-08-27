@@ -1,10 +1,9 @@
-﻿namespace Application.Exceptions
+namespace Application.Exceptions;
+
+public class UnauthorizedException : Exception
 {
-    public class UnauthorizedException : Exception
+    public UnauthorizedException(string message = "Please login and try again!")
+        : base(message)
     {
-        public UnauthorizedException(string message = "Please login and try again!")
-            : base(message)
-        {
-        }
     }
 }

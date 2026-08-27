@@ -1,4 +1,4 @@
-﻿using Domain.Entities.Catalog;
+using Domain.Entities.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,8 +9,5 @@ public sealed class ProductImageConfiguration : IEntityTypeConfiguration<Product
     public void Configure(EntityTypeBuilder<ProductImage> builder)
     {
         builder.HasKey(x => new { x.ProductId, x.ImageKey });
-
-        builder.Property(x => x.ImageKey)
-            .HasMaxLength(400);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Exceptions;
 using Domain.Entities.Identity;
 using MediatR;
@@ -10,13 +10,12 @@ internal class ResetPasswordCommandHandler(UserManager<AppUser> userManager, IRe
 {
     public async Task Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email) 
+        var user = await userManager.FindByEmailAsync(request.Email)
             ?? throw new UnauthorizedException("The password reset request is invalid.");
 
         var result = await userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
 
-        if (!result.Succeeded)
-        {
+        if (!result.Succeeded) {
             var errors = result.Errors
                 .GroupBy(x => x.Code)
                 .ToDictionary(x => x.Key, x => x.Select(e => e.Description)
@@ -29,8 +28,7 @@ internal class ResetPasswordCommandHandler(UserManager<AppUser> userManager, IRe
             x => x.UserId == user.Id && x.RevokedAt == null,
             cancellationToken);
 
-        foreach (var refreshToken in activeRefreshTokens)
-        {
+        foreach (var refreshToken in activeRefreshTokens) {
             refreshToken.Revoke();
         }
 

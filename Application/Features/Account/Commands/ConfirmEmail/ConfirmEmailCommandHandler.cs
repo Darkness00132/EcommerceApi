@@ -1,4 +1,4 @@
-﻿using Application.Exceptions;
+using Application.Exceptions;
 using Domain.Entities.Identity;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -12,8 +12,7 @@ internal class ConfirmEmailCommandHandler(UserManager<AppUser> userManager) : IR
         var user = await userManager.FindByEmailAsync(request.Email) ?? throw new UnauthorizedAccessException("The email confirmation request is invalid.");
 
         var result = await userManager.ConfirmEmailAsync(user, request.Token);
-        if (!result.Succeeded)
-        {
+        if (!result.Succeeded) {
             var errors = result.Errors
                 .GroupBy(x => x.Code)
                 .ToDictionary(x => x.Key, x => x.Select(e => e.Description)

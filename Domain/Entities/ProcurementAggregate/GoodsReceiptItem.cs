@@ -1,4 +1,4 @@
-﻿using Domain.Common;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
 
@@ -18,7 +18,7 @@ public sealed class GoodsReceiptItem : Entity
 
     private GoodsReceiptItem() { }
 
-    public GoodsReceiptItem(
+    internal GoodsReceiptItem(
         Guid goodsReceiptId,
         Guid productId,
         int quantity)
@@ -31,17 +31,19 @@ public sealed class GoodsReceiptItem : Entity
             throw new DomainException("Product id is required.");
 
         if (quantity <= 0)
-            throw new DomainException("Quantity must be greater than zero.");
+            throw new DomainException(
+                "Quantity must be greater than zero.");
 
         GoodsReceiptId = goodsReceiptId;
         ProductId = productId;
         Quantity = quantity;
     }
 
-    public void IncreaseQuantity(int quantity)
+    internal void IncreaseQuantity(int quantity)
     {
         if (quantity <= 0)
-            throw new DomainException("Quantity must be greater than zero.");
+            throw new DomainException(
+                "Quantity must be greater than zero.");
 
         Quantity += quantity;
     }

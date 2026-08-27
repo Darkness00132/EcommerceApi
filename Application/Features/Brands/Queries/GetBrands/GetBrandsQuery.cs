@@ -1,4 +1,4 @@
-﻿using Application.Constants;
+using Application.Constants;
 using Application.Features.Brands.Dtos;
 
 public sealed record GetBrandsQuery
@@ -8,8 +8,9 @@ public sealed record GetBrandsQuery
 
     public IReadOnlyCollection<string> Tags => [CacheNames.Brands];
 
-    public CacheOptions CacheOptions => new()
-    {
+    public CacheOptions CacheOptions => new() {
         AbsoluteExpiration = TimeSpan.FromMinutes(10)
     };
+
+    public bool BypassCache => false;
 }

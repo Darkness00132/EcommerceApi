@@ -1,39 +1,49 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Common;
 using Domain.Entities.Identity;
 using Domain.Entities.PromotionsAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.OrdersAggregate;
 
 public sealed class Order : AggregateRoot
 {
+    private readonly List<OrderItem> _items = new();
+
     public Guid UserId { get; private set; }
 
     public AppUser User { get; private set; } = null!;
 
     public OrderStatus Status { get; private set; }
 
+    [Precision(18, 2)]
     public decimal Subtotal { get; private set; }
 
+    [Precision(18, 2)]
     public decimal ShippingFee { get; private set; }
 
+    [Precision(18, 2)]
     public decimal ItemsDiscountAmount { get; private set; }
 
+    [Precision(18, 2)]
     public decimal PromoDiscountAmount { get; private set; }
 
+    [Precision(18, 2)]
     public decimal Total { get; private set; }
 
     public Address ShippingAddress { get; private set; } = null!;
 
     public Guid? PromoCodeId { get; private set; }
+
     public PromoCode? PromoCode { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
 
-    public ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
+    public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
     [NotMapped]
     public bool IsCompleted => Status is OrderStatus.Delivered or OrderStatus.Refunded;
@@ -50,7 +60,7 @@ public sealed class Order : AggregateRoot
             throw new DomainException("User id is required.");
 
         UserId = userId;
-        ShippingAddress = shippingAddress;
+        ShippingAddress = shippingAddress ?? throw new DomainException("Shipping address is required.");
         PromoCodeId = promoCodeId;
         Status = OrderStatus.Pending;
         CreatedAt = DateTime.UtcNow;
@@ -62,6 +72,8 @@ public sealed class Order : AggregateRoot
         decimal unitPrice,
         decimal discountAmount = 0)
     {
+        EnsurePendingState("modify order items");
+
         if (productId == Guid.Empty)
             throw new DomainException("Product id is required.");
 
@@ -74,16 +86,15 @@ public sealed class Order : AggregateRoot
         if (discountAmount < 0)
             throw new DomainException("Discount amount cannot be negative.");
 
-        var existingItem = Items.FirstOrDefault(x => x.ProductId == productId);
+        var existingItem = _items.FirstOrDefault(x => x.ProductId == productId);
 
-        if (existingItem is not null)
-        {
+        if (existingItem is not null) {
             existingItem.IncreaseQuantity(quantity);
             RecalculateTotals();
             return;
         }
 
-        Items.Add(new OrderItem(
+        _items.Add(new OrderItem(
             orderId: Id,
             productId: productId,
             quantity: quantity,
@@ -95,16 +106,19 @@ public sealed class Order : AggregateRoot
 
     public void SetShippingFee(decimal shippingFee)
     {
+        EnsurePendingState("set shipping fee");
+
         if (shippingFee < 0)
             throw new DomainException("Shipping fee cannot be negative.");
 
         ShippingFee = shippingFee;
-
         RecalculateTotals();
     }
 
     public void ApplyPromoCode(Guid promoCodeId, decimal promoDiscountAmount)
     {
+        EnsurePendingState("apply promo code");
+
         if (promoCodeId == Guid.Empty)
             throw new DomainException("Promo code id is required.");
 
@@ -119,6 +133,8 @@ public sealed class Order : AggregateRoot
 
     public void RemovePromoCode()
     {
+        EnsurePendingState("remove promo code");
+
         PromoCodeId = null;
         PromoDiscountAmount = 0;
 
@@ -127,15 +143,14 @@ public sealed class Order : AggregateRoot
 
     public void ChangeShippingAddress(Address shippingAddress)
     {
-        if (Status != OrderStatus.Pending)
-            throw new DomainException("Shipping address can only be changed while order is pending.");
+        EnsurePendingState("change shipping address");
 
-        ShippingAddress = shippingAddress;
+        ShippingAddress = shippingAddress ?? throw new DomainException("Shipping address is required.");
     }
 
     public void Confirm()
     {
-        if (!Items.Any())
+        if (!_items.Any())
             throw new DomainException("Cannot confirm an order without items.");
 
         if (Status != OrderStatus.Pending)
@@ -186,12 +201,16 @@ public sealed class Order : AggregateRoot
 
     private void RecalculateTotals()
     {
-        Subtotal = Items.Sum(x => x.UnitPrice * x.Quantity);
-        ItemsDiscountAmount = Items.Sum(x => x.DiscountAmount * x.Quantity);
+        Subtotal = _items.Sum(x => x.UnitPrice * x.Quantity);
+        ItemsDiscountAmount = _items.Sum(x => x.DiscountAmount * x.Quantity);
 
-        Total = Subtotal + ShippingFee - ItemsDiscountAmount - PromoDiscountAmount;
+        var netTotal = Subtotal + ShippingFee - ItemsDiscountAmount - PromoDiscountAmount;
+        Total = Math.Max(0, netTotal);
+    }
 
-        if (Total < 0)
-            Total = 0;
+    private void EnsurePendingState(string action)
+    {
+        if (Status != OrderStatus.Pending)
+            throw new DomainException($"Cannot {action} when order status is {Status}.");
     }
 }

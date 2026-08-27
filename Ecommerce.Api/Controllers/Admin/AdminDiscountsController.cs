@@ -1,4 +1,4 @@
-﻿using Application.Features.Discounts.Commands.CreateDiscount;
+using Application.Features.Discounts.Commands.CreateDiscount;
 using Application.Features.Discounts.Commands.DeleteDiscount;
 using Application.Features.Discounts.Commands.UpdateDiscount;
 using Application.Features.Discounts.Common;
@@ -140,8 +140,7 @@ public class AdminDiscountsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var command = _mapper.Map<UpdateDiscountCommand>(request)
-            with
-        { Id = id };
+            with { Id = id };
 
         await _sender.Send(
             command,

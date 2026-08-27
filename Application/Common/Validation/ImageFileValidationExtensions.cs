@@ -1,4 +1,4 @@
-﻿using Application.Common.Files;
+using Application.Common.Files;
 using FluentValidation;
 
 namespace Application.Common.Validation;

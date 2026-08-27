@@ -1,4 +1,4 @@
-﻿using Application.Features.Account.Dto;
+using Application.Features.Account.Dto;
 using Application.Features.Account.Services;
 using Domain.Entities.Identity;
 using MediatR;
@@ -17,7 +17,7 @@ internal class LoginAccountCommandHandler(UserManager<AppUser> userManager, Acco
 
         var isCorrectPassword = await userManager.CheckPasswordAsync(user, request.Password);
 
-        if (!isCorrectPassword) 
+        if (!isCorrectPassword)
             throw new UnauthorizedAccessException("Invalid email or password.");
 
         return await tokenService.CreateAsync(user, cancellationToken);

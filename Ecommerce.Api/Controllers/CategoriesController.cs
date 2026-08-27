@@ -1,4 +1,4 @@
-﻿using Api.Contracts.Common;
+using Api.Contracts.Common;
 using Application.Common.Pagination;
 using Application.Features.Categories.Dtos;
 using Application.Features.Categories.Queries.GetCategories;

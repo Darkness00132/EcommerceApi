@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
 using Domain.ValueObjects;
@@ -28,8 +28,7 @@ internal sealed class UpdateDiscountHandler
             request.Id,
             cancellationToken);
 
-        if (discount is null)
-        {
+        if (discount is null) {
             throw new DomainException("Discount was not found.");
         }
 
@@ -45,20 +44,17 @@ internal sealed class UpdateDiscountHandler
             request.StartDate ?? discount.StartDate,
             request.EndDate ?? discount.EndDate);
 
-        discount.Update(
+        discount.UpdateDetails(
             name,
             discountType,
             value,
             validityPeriod);
 
-        if (request.IsActive is not null)
-        {
-            if (request.IsActive.Value)
-            {
+        if (request.IsActive is not null) {
+            if (request.IsActive.Value) {
                 discount.Activate();
             }
-            else
-            {
+            else {
                 discount.Deactivate();
             }
         }

@@ -1,4 +1,4 @@
-﻿using Application.Common.Validation;
+using Application.Common.Validation;
 using FluentValidation;
 
 namespace Application.Features.Categories.Commands.CreateCategory;
@@ -16,7 +16,7 @@ internal class CreateCategoryCommandValidator : AbstractValidator<CreateCategory
             .MaximumLength(100);
 
         RuleFor(command => command.Image)
-            .ValidImageFile(5*1024*1024); // 5 MB limit
+            .ValidImageFile(5 * 1024 * 1024); // 5 MB limit
 
         RuleFor(command => command.DescriptionEn)
             .MaximumLength(500);

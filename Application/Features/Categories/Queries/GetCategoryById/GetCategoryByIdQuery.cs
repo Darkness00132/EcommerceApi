@@ -1,4 +1,4 @@
-﻿using Application.Constants;
+using Application.Constants;
 using Application.Features.Categories.Dtos;
 using MediatR;
 
@@ -10,8 +10,9 @@ public sealed record GetCategoryByIdQuery(Guid Id) : ICacheableQuery<CategoryDto
 
     public IReadOnlyCollection<string> Tags => [CacheNames.Categories];
 
-    public CacheOptions CacheOptions => new CacheOptions
-    {
+    public CacheOptions CacheOptions => new CacheOptions {
         AbsoluteExpiration = TimeSpan.FromDays(30)
     };
+
+    public bool BypassCache => false;
 }

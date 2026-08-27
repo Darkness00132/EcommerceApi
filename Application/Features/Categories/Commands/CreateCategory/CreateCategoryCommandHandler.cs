@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.Constants;
 using Application.Exceptions;
@@ -36,8 +36,8 @@ internal class CreateCategoryCommandHandler
         if (duplicatedCategory is not null)
             throw new ConflictException("A category with the same English or Arabic name already exists.");
 
-        var manipulatedImage = await _imageManipulationService.ResizeImage(request.Image, ImageType.Category, cancellationToken);
-        var imageKey = await _storageService.UploadAsync(manipulatedImage, FileDestination.Categories ,cancellationToken);
+        var manipulatedImage = await _imageManipulationService.ResizeImageAsync(request.Image, ImageType.Category, cancellationToken);
+        var imageKey = await _storageService.UploadAsync(manipulatedImage, FileDestination.Categories, cancellationToken);
 
         var category = new Category(
             request.NameEn,
@@ -48,13 +48,11 @@ internal class CreateCategoryCommandHandler
 
         await _categoryRepository.AddAsync(category, cancellationToken);
 
-        try
-        {
+        try {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         }
-        catch
-        {
+        catch {
             // If saving the category fails, delete the uploaded image to avoid orphaned files.
             await _storageService.DeleteAsync(imageKey, cancellationToken);
             throw;

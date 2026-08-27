@@ -1,18 +1,31 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
+using Domain.Entities.InventoryAggregate;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.Catalog;
 
 public sealed class Product : AggregateRoot
 {
+    private readonly List<ProductImage> _images = new();
+
+    [MaxLength(200)]
     public string NameEn { get; private set; } = null!;
+
+    [MaxLength(200)]
     public string NameAr { get; private set; } = null!;
 
+    [MaxLength(100)]
     public string SKU { get; private set; } = null!;
 
-    public string? DescriptionEn { get; private set; }
-    public string? DescriptionAr { get; private set; }
+    [MaxLength(2000)]
+    public string DescriptionEn { get; private set; } = null!;
 
+    [MaxLength(2000)]
+    public string DescriptionAr { get; private set; } = null!;
+
+    [Precision(18,2)]
     public decimal Price { get; private set; }
 
     public bool IsActive { get; private set; }
@@ -24,59 +37,44 @@ public sealed class Product : AggregateRoot
     public Category Category { get; private set; } = null!;
     public Brand Brand { get; private set; } = null!;
     public Discount? Discount { get; private set; }
+    public Inventory Inventory { get; private set; } = null!;
 
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
-    public byte[] RowVersion { get; private set; } = [];
+    [Timestamp]
+    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
-    public ICollection<ProductImage> Images { get; private set; } = new List<ProductImage>();
+    public IReadOnlyCollection<ProductImage> Images => _images.AsReadOnly();
 
-    private Product() { }
+    private Product() { } // Required for EF Core
 
     public Product(
         string nameEn,
         string nameAr,
+        string descriptionEn,
+        string descriptionAr,
         string sku,
         decimal price,
         Guid categoryId,
-        Guid brandId,
-        string? descriptionEn = null,
-        string? descriptionAr = null)
+        Guid brandId)
     {
-        if (string.IsNullOrWhiteSpace(nameEn))
-            throw new DomainException("English product name is required.");
-
-        if (string.IsNullOrWhiteSpace(nameAr))
-            throw new DomainException("Arabic product name is required.");
-
-        if (string.IsNullOrWhiteSpace(sku))
-            throw new DomainException("Product SKU is required.");
-
-        if (price < 0)
-            throw new DomainException("Product price cannot be negative.");
+        UpdateDetails(nameEn, nameAr, descriptionEn, descriptionAr, sku);
+        ChangePrice(price);
+        SetCategory(categoryId);
+        SetBrand(brandId);
 
         Id = Guid.NewGuid();
-        NameEn = nameEn.Trim();
-        NameAr = nameAr.Trim();
-        SKU = sku.Trim();
-        Price = price;
-        CategoryId = categoryId;
-        BrandId = brandId;
-        DescriptionEn = string.IsNullOrWhiteSpace(descriptionEn) ? null : descriptionEn.Trim();
-        DescriptionAr = string.IsNullOrWhiteSpace(descriptionAr) ? null : descriptionAr.Trim();
-        IsActive = true;
+        IsActive = false;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateBasicInfo(
+    public void UpdateDetails(
         string nameEn,
         string nameAr,
-        string sku,
-        Guid categoryId,
-        Guid brandId,
-        string? descriptionEn = null,
-        string? descriptionAr = null)
+        string descriptionEn,
+        string descriptionAr,
+        string sku)
     {
         if (string.IsNullOrWhiteSpace(nameEn))
             throw new DomainException("English product name is required.");
@@ -84,17 +82,21 @@ public sealed class Product : AggregateRoot
         if (string.IsNullOrWhiteSpace(nameAr))
             throw new DomainException("Arabic product name is required.");
 
+        if (string.IsNullOrWhiteSpace(descriptionEn))
+            throw new DomainException("English product description is required.");
+
+        if (string.IsNullOrWhiteSpace(descriptionAr))
+            throw new DomainException("Arabic product description is required.");
+
         if (string.IsNullOrWhiteSpace(sku))
             throw new DomainException("Product SKU is required.");
 
         NameEn = nameEn.Trim();
         NameAr = nameAr.Trim();
+        DescriptionEn = descriptionEn.Trim();
+        DescriptionAr = descriptionAr.Trim();
         SKU = sku.Trim();
-        CategoryId = categoryId;
-        BrandId = brandId;
-        DescriptionEn = string.IsNullOrWhiteSpace(descriptionEn) ? null : descriptionEn.Trim();
-        DescriptionAr = string.IsNullOrWhiteSpace(descriptionAr) ? null : descriptionAr.Trim();
-        UpdatedAt = DateTime.UtcNow;
+        Touch();
     }
 
     public void ChangePrice(decimal price)
@@ -103,19 +105,40 @@ public sealed class Product : AggregateRoot
             throw new DomainException("Product price cannot be negative.");
 
         Price = price;
-        UpdatedAt = DateTime.UtcNow;
+        Touch();
+    }
+
+    public void SetCategory(Guid categoryId)
+    {
+        if (categoryId == Guid.Empty)
+            throw new DomainException("Category ID cannot be empty.");
+
+        CategoryId = categoryId;
+        Touch();
+    }
+
+    public void SetBrand(Guid brandId)
+    {
+        if (brandId == Guid.Empty)
+            throw new DomainException("Brand ID cannot be empty.");
+
+        BrandId = brandId;
+        Touch();
     }
 
     public void AssignDiscount(Guid discountId)
     {
+        if (discountId == Guid.Empty)
+            throw new DomainException("Discount ID cannot be empty.");
+
         DiscountId = discountId;
-        UpdatedAt = DateTime.UtcNow;
+        Touch();
     }
 
     public void RemoveDiscount()
     {
         DiscountId = null;
-        UpdatedAt = DateTime.UtcNow;
+        Touch();
     }
 
     public void AddImage(string imageKey)
@@ -123,35 +146,48 @@ public sealed class Product : AggregateRoot
         if (string.IsNullOrWhiteSpace(imageKey))
             throw new DomainException("Product image is required.");
 
-        imageKey = imageKey.Trim();
+        var trimmedKey = imageKey.Trim();
 
-        if (Images.Any(x => x.ImageKey == imageKey))
+        if (_images.Any(x => x.ImageKey == trimmedKey))
             return;
 
-        Images.Add(new ProductImage(Id, imageKey));
-        UpdatedAt = DateTime.UtcNow;
+        _images.Add(new ProductImage(Id, trimmedKey));
+        Touch();
     }
 
     public void RemoveImage(string imageKey)
     {
-        var image = Images.FirstOrDefault(x => x.ImageKey == imageKey);
+        if (string.IsNullOrWhiteSpace(imageKey)) return;
+
+        var trimmedKey = imageKey.Trim();
+        var image = _images.FirstOrDefault(x => x.ImageKey == trimmedKey);
 
         if (image is null)
             return;
 
-        Images.Remove(image);
-        UpdatedAt = DateTime.UtcNow;
+        _images.Remove(image);
+        Touch();
     }
 
     public void Activate()
     {
         IsActive = true;
-        UpdatedAt = DateTime.UtcNow;
+        Touch();
     }
 
     public void Deactivate()
     {
         IsActive = false;
+        Touch();
+    }
+
+    internal void SetInventory(Inventory inventory)
+    {
+        Inventory = inventory ?? throw new DomainException("Inventory cannot be null.");
+    }
+
+    private void Touch()
+    {
         UpdatedAt = DateTime.UtcNow;
     }
 }

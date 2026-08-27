@@ -1,4 +1,4 @@
-﻿using Application.Features.Account.Dto;
+using Application.Features.Account.Dto;
 using MediatR;
 
 namespace Application.Features.Account.Commands.RefreshToken;

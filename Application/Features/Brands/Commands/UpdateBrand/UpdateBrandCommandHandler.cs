@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Exceptions;
 using Domain.Entities.Catalog;
 using MediatR;
@@ -41,9 +41,8 @@ internal class UpdateBrandCommandHandler : IRequestHandler<UpdateBrandCommand>
         if (duplicatedBrand is not null)
             throw new ConflictException("A brand with the same English or Arabic name already exists.");
 
-        brand.Update(
-            request.NameEn,
-            request.NameAr);
+        brand.UpdateEnglishName(request.NameEn ?? brand.NameEn);
+        brand.UpdateArabicName(request.NameAr ?? brand.NameAr);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

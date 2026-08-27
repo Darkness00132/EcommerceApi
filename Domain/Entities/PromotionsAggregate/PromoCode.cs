@@ -1,19 +1,23 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.PromotionsAggregate;
 
 public sealed class PromoCode : AggregateRoot
 {
+    [MaxLength(50)]
     public string Code { get; private set; } = null!;
 
     public PromoDiscountType DiscountType { get; private set; }
 
+    [Precision(18, 4)]
     public decimal Value { get; private set; }
 
+    [Precision(18, 2)]
     public decimal MinimumOrder { get; private set; }
 
     public int? UsageLimit { get; private set; }
@@ -24,18 +28,17 @@ public sealed class PromoCode : AggregateRoot
 
     public bool IsActive { get; private set; }
 
+    [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
 
-    [NotMapped]
     public DateOnly StartDate => ValidityPeriod.StartDate;
 
-    [NotMapped]
     public DateOnly ExpirationDate => ValidityPeriod.EndDate;
 
-    [NotMapped]
     public bool HasUsageLimit => UsageLimit.HasValue;
 
     private PromoCode() { }
+
     public PromoCode(
         string code,
         PromoDiscountType discountType,
@@ -45,40 +48,45 @@ public sealed class PromoCode : AggregateRoot
         int? usageLimit = null)
         : base(Guid.NewGuid())
     {
-        if (string.IsNullOrWhiteSpace(code))
-            throw new DomainException("Promo code is required.");
+        Code = ValidateCode(code);
 
         if (minimumOrder < 0)
-            throw new DomainException("Minimum order cannot be negative.");
+            throw new DomainException(
+                "Minimum order cannot be negative.");
 
         if (usageLimit.HasValue && usageLimit.Value <= 0)
-            throw new DomainException("Usage limit must be greater than zero.");
+            throw new DomainException(
+                "Usage limit must be greater than zero.");
 
         ValidateValue(discountType, value);
 
-        Code = code.Trim().ToUpperInvariant();
         DiscountType = discountType;
         Value = value;
         MinimumOrder = minimumOrder;
         ValidityPeriod = validityPeriod;
         UsageLimit = usageLimit;
+
         UsedCount = 0;
         IsActive = true;
     }
 
-    public bool CanBeUsed(decimal orderTotal, DateOnly date)
+    public bool CanBeUsed(
+        decimal orderTotal,
+        DateOnly currentDate)
     {
         if (!IsActive)
             return false;
 
-        if (!ValidityPeriod.Contains(date))
+        if (!ValidityPeriod.Contains(currentDate))
             return false;
 
         if (orderTotal < MinimumOrder)
             return false;
 
-        if (UsageLimit.HasValue && UsedCount >= UsageLimit.Value)
+        if (UsageLimit.HasValue &&
+            UsedCount >= UsageLimit.Value) {
             return false;
+        }
 
         return true;
     }
@@ -86,22 +94,34 @@ public sealed class PromoCode : AggregateRoot
     public decimal CalculateDiscount(decimal orderTotal)
     {
         if (orderTotal < MinimumOrder)
-            return 0;
+            return 0m;
 
-        var discount = DiscountType switch
-        {
-            PromoDiscountType.Percentage => orderTotal * Value / 100,
-            PromoDiscountType.FixedAmount => Value,
-            _ => throw new DomainException("Invalid promo discount type.")
+        var discount = DiscountType switch {
+            PromoDiscountType.Percentage =>
+                orderTotal * Value / 100m,
+
+            PromoDiscountType.FixedAmount =>
+                Value,
+
+            _ => throw new DomainException(
+                "Invalid promo discount type.")
         };
 
-        return discount > orderTotal ? orderTotal : discount;
+        return Math.Min(discount, orderTotal);
     }
 
     public void MarkAsUsed()
     {
-        if (UsageLimit.HasValue && UsedCount >= UsageLimit.Value)
-            throw new DomainException("Promo code usage limit has been reached.");
+        if (!IsActive) {
+            throw new DomainException(
+                "Inactive promo code cannot be used.");
+        }
+
+        if (UsageLimit.HasValue &&
+            UsedCount >= UsageLimit.Value) {
+            throw new DomainException(
+                "Promo code usage limit has been reached.");
+        }
 
         UsedCount++;
     }
@@ -114,21 +134,26 @@ public sealed class PromoCode : AggregateRoot
         DateRange validityPeriod,
         int? usageLimit = null)
     {
-        if (string.IsNullOrWhiteSpace(code))
-            throw new DomainException("Promo code is required.");
+        if (minimumOrder < 0) {
+            throw new DomainException(
+                "Minimum order cannot be negative.");
+        }
 
-        if (minimumOrder < 0)
-            throw new DomainException("Minimum order cannot be negative.");
+        if (usageLimit.HasValue &&
+            usageLimit.Value <= 0) {
+            throw new DomainException(
+                "Usage limit must be greater than zero.");
+        }
 
-        if (usageLimit.HasValue && usageLimit.Value <= 0)
-            throw new DomainException("Usage limit must be greater than zero.");
-
-        if (usageLimit.HasValue && usageLimit.Value < UsedCount)
-            throw new DomainException("Usage limit cannot be less than used count.");
+        if (usageLimit.HasValue &&
+            usageLimit.Value < UsedCount) {
+            throw new DomainException(
+                "Usage limit cannot be less than used count.");
+        }
 
         ValidateValue(discountType, value);
 
-        Code = code.Trim().ToUpperInvariant();
+        Code = ValidateCode(code);
         DiscountType = discountType;
         Value = value;
         MinimumOrder = minimumOrder;
@@ -146,12 +171,37 @@ public sealed class PromoCode : AggregateRoot
         IsActive = false;
     }
 
-    private static void ValidateValue(PromoDiscountType discountType, decimal value)
+    private static string ValidateCode(string code)
     {
-        if (value <= 0)
-            throw new DomainException("Promo discount value must be greater than zero.");
+        if (string.IsNullOrWhiteSpace(code)) {
+            throw new DomainException(
+                "Promo code is required.");
+        }
 
-        if (discountType == PromoDiscountType.Percentage && value > 100)
-            throw new DomainException("Percentage promo discount cannot exceed 100.");
+        var normalizedCode =
+            code.Trim().ToUpperInvariant();
+
+        if (normalizedCode.Length > 50) {
+            throw new DomainException(
+                "Promo code cannot exceed 50 characters.");
+        }
+
+        return normalizedCode;
+    }
+
+    private static void ValidateValue(
+        PromoDiscountType discountType,
+        decimal value)
+    {
+        if (value <= 0) {
+            throw new DomainException(
+                "Promo discount value must be greater than zero.");
+        }
+
+        if (discountType == PromoDiscountType.Percentage &&
+            value > 100) {
+            throw new DomainException(
+                "Percentage promo discount cannot exceed 100.");
+        }
     }
 }

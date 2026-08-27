@@ -1,11 +1,11 @@
-﻿using Api.Contracts.Common;
+using System.Linq.Expressions;
+using Api.Contracts.Common;
 using Application.Abstractions.Repositories;
 using Application.Common.Pagination;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain.Common;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Infrastructure.Persistence.Repositories;
 
@@ -64,7 +64,7 @@ internal class Repository<TEntity> : IRepository<TEntity>
             .SingleOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<TResponse>> ProjectToPagedAsync<TResponse>(Expression<Func<TEntity, object>> orderBy, Expression<Func<TEntity, bool>>? predicate = null, bool descending = false, CancellationToken cancellationToken = default) where TResponse : class
+    public async Task<IReadOnlyList<TResponse>> ProjectToListAsync<TResponse>(Expression<Func<TEntity, object>> orderBy, Expression<Func<TEntity, bool>>? predicate = null, bool descending = false, CancellationToken cancellationToken = default) where TResponse : class
     {
         var query = _dbSet.AsNoTracking();
 
@@ -80,7 +80,7 @@ internal class Repository<TEntity> : IRepository<TEntity>
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<PagedResult<TResponse>> ProjectToPagedWithPaginationAsync<TResponse>(
+    public async Task<PagedResult<TResponse>> ProjectToPagedAsync<TResponse>(
         PaginationRequest pagination,
         Expression<Func<TEntity, object>> orderBy,
         Expression<Func<TEntity, bool>>? predicate = null,
@@ -117,6 +117,12 @@ internal class Repository<TEntity> : IRepository<TEntity>
         CancellationToken cancellationToken = default)
     {
         await _dbSet.AddAsync(entity, cancellationToken);
+    }
+
+    public async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.AnyAsync(predicate, cancellationToken);
     }
 
     private static IQueryable<TEntity> ApplyIncludes(

@@ -1,7 +1,7 @@
+using System.IO;
 using Application.Abstractions.Services;
 using Application.Settings;
 using MailKit.Net.Smtp;
-using System.IO;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -44,8 +44,7 @@ internal class MailKitEmailSender(
 
         message.Subject = subject;
 
-        message.Body = new BodyBuilder
-        {
+        message.Body = new BodyBuilder {
             HtmlBody = htmlBody
         }.ToMessageBody();
 
@@ -61,17 +60,16 @@ internal class MailKitEmailSender(
             secureSocketOptions,
             cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(emailSettings.UserName))
-        {
+        if (!string.IsNullOrWhiteSpace(emailSettings.UserName)) {
             await client.AuthenticateAsync(
                 emailSettings.UserName,
                 emailSettings.Password,
                 cancellationToken);
         }
 
-         await client.SendAsync(
-            message,
-            cancellationToken);
+        await client.SendAsync(
+           message,
+           cancellationToken);
 
         await client.DisconnectAsync(
             true,

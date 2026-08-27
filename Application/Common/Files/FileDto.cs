@@ -1,4 +1,4 @@
-﻿namespace Application.Common.Files;
+namespace Application.Common.Files;
 
 public sealed record FileDto(
     string FileName,

@@ -1,4 +1,4 @@
-﻿using Application.Features.Brands.Dtos;
+using Application.Features.Brands.Dtos;
 using AutoMapper;
 using Domain.Entities.Catalog;
 

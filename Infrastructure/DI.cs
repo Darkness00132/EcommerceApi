@@ -1,4 +1,6 @@
-﻿using Application.Abstractions.Repositories;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.Constants;
 using Application.Settings;
@@ -15,15 +17,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
 
 public static class DI
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // Add infrastructure services here
-        var connectionString =configuration.GetConnectionString("DefaultConnection")
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("The DefaultConnection connection string is not configured.");
 
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -36,8 +36,7 @@ public static class DI
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? throw new InvalidOperationException("JWT settings are required.");
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
-            {
+            .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters {
                 ValidateIssuer = true,
                 ValidIssuer = jwt.Issuer,
                 ValidateAudience = true,
@@ -49,8 +48,7 @@ public static class DI
                 RoleClaimType = System.Security.Claims.ClaimTypes.Role
             });
 
-        services.AddSingleton<ICloudinary>(sp =>
-        {
+        services.AddSingleton<ICloudinary>(sp => {
             var account = new Account(
                 configuration.GetValue<string>("Cloudinary:CloudName"),
                 configuration.GetValue<string>("Cloudinary:ApiKey"),
@@ -59,13 +57,11 @@ public static class DI
             return new Cloudinary(account);
         });
 
-        services.AddHangfire(options =>
-        {
+        services.AddHangfire(options => {
             options.UseSqlServerStorage(connectionString);
         });
 
-        services.AddHangfireServer(options =>
-        {
+        services.AddHangfireServer(options => {
             options.Queues =
             [
                 BackgroundJobQueues.Critical,
@@ -82,6 +78,7 @@ public static class DI
         services.AddScoped<IStorageService, CloudinaryStorageService>();
         services.AddScoped<IImageManipulationService, SixLaborsImageService>();
 
+        services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

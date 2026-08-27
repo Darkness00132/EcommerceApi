@@ -5,4 +5,9 @@
     <Project Path="Ecommerce.Api/Ecommerce.Api.csproj" />
     <Project Path="Infrastructure/Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="Application.Test/Application.Test.csproj" Id="75282ba7-85c9-4531-bf7d-a17bde2fadce" />
+    <Project Path="Domain.Test/Domain.Test.csproj" Id="b6006a9f-7b14-424c-9e4f-b4cbdac7e377" />
+    <Project Path="Infrastructure.Test/Infrastructure.Test.csproj" Id="50aa251d-b908-4a5d-9b00-1e4736dcbdc1" />
+  </Folder>
 </Solution>

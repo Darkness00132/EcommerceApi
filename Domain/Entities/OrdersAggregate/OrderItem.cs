@@ -1,11 +1,12 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.OrdersAggregate;
 
-public sealed class OrderItem : Entity
+public sealed class OrderItem : IEntity
 {
     public Guid OrderId { get; private set; }
 
@@ -17,8 +18,10 @@ public sealed class OrderItem : Entity
 
     public int Quantity { get; private set; }
 
+    [Precision(18, 2)]
     public decimal UnitPrice { get; private set; }
 
+    [Precision(18, 2)]
     public decimal DiscountAmount { get; private set; }
 
     [NotMapped]
@@ -31,13 +34,13 @@ public sealed class OrderItem : Entity
     public decimal LineTotal => LineSubtotal - LineDiscount;
 
     private OrderItem() { }
-    public OrderItem(
+
+    internal OrderItem(
         Guid orderId,
         Guid productId,
         int quantity,
         decimal unitPrice,
         decimal discountAmount = 0)
-        : base(Guid.NewGuid())
     {
         if (orderId == Guid.Empty)
             throw new DomainException("Order id is required.");
@@ -61,7 +64,7 @@ public sealed class OrderItem : Entity
         DiscountAmount = discountAmount;
     }
 
-    public void IncreaseQuantity(int quantity)
+    internal void IncreaseQuantity(int quantity)
     {
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");

@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Services;
+using Application.Abstractions.Services;
 using Application.Common.Files;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
@@ -13,8 +13,7 @@ internal class CloudinaryStorageService(ICloudinary cloudinary)
         string destination,
         CancellationToken cancellationToken = default)
     {
-        var uploadParams = new ImageUploadParams
-        {
+        var uploadParams = new ImageUploadParams {
             File = new FileDescription(
                 file.FileName,
                 file.Content),
@@ -48,8 +47,7 @@ internal class CloudinaryStorageService(ICloudinary cloudinary)
         CancellationToken cancellationToken = default)
     {
         var result = await cloudinary.DestroyAsync(
-            new DeletionParams(key)
-            {
+            new DeletionParams(key) {
                 Invalidate = true
             });
 
@@ -69,8 +67,7 @@ internal class CloudinaryStorageService(ICloudinary cloudinary)
             ResourceType.Image,
             publicIds);
 
-        if (result.Error is not null)
-        {
+        if (result.Error is not null) {
             throw new InvalidOperationException(
                 result.Error.Message);
         }
@@ -79,14 +76,12 @@ internal class CloudinaryStorageService(ICloudinary cloudinary)
     private static void ValidateUploadResult(
         ImageUploadResult result)
     {
-        if (result.Error is not null)
-        {
+        if (result.Error is not null) {
             throw new InvalidOperationException(
                 result.Error.Message);
         }
 
-        if (string.IsNullOrWhiteSpace(result.PublicId))
-        {
+        if (string.IsNullOrWhiteSpace(result.PublicId)) {
             throw new InvalidOperationException(
                 "Cloudinary did not return a public id.");
         }
@@ -96,14 +91,12 @@ internal class CloudinaryStorageService(ICloudinary cloudinary)
         DeletionResult result,
         string key)
     {
-        if (result.Error is not null)
-        {
+        if (result.Error is not null) {
             throw new InvalidOperationException(
                 result.Error.Message);
         }
 
-        if (result.Result is not ("ok" or "not found"))
-        {
+        if (result.Result is not ("ok" or "not found")) {
             throw new InvalidOperationException(
                 $"Failed to delete file '{key}'.");
         }

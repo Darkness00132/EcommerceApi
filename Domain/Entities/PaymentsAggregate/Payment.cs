@@ -1,29 +1,31 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Entities.OrdersAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.PaymentsAggregate;
 
 public sealed class Payment : AggregateRoot
 {
+    private readonly List<PaymentAttempt> _attempts = new();
+
     public Guid OrderId { get; private set; }
-
     public Order Order { get; private set; } = null!;
-
     public PaymentStatus Status { get; private set; }
 
+    [Precision(18, 2)]
     public decimal Amount { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
-
     public DateTime? PaidAt { get; private set; }
-
     public DateTime? RefundedAt { get; private set; }
 
+    [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
 
-    public ICollection<PaymentAttempt> Attempts { get; private set; } = new List<PaymentAttempt>();
+    public IReadOnlyCollection<PaymentAttempt> Attempts => _attempts.AsReadOnly();
 
     private Payment() { }
 
@@ -50,7 +52,7 @@ public sealed class Payment : AggregateRoot
         if (amount <= 0)
             throw new DomainException("Payment attempt amount must be greater than zero.");
 
-        Attempts.Add(new PaymentAttempt(
+        _attempts.Add(new PaymentAttempt(
             paymentId: Id,
             method: method,
             amount: amount));

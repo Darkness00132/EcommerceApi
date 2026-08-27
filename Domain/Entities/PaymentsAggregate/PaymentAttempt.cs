@@ -1,34 +1,32 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Enums;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.PaymentsAggregate;
 
 public sealed class PaymentAttempt : Entity
 {
     public Guid PaymentId { get; private set; }
-
     public Payment Payment { get; private set; } = null!;
-
     public PaymentMethod Method { get; private set; }
-
     public PaymentAttemptStatus Status { get; private set; }
 
+    [Precision(18, 2)]
     public decimal Amount { get; private set; }
 
+    [MaxLength(100)]
     public string? TransactionId { get; private set; }
 
+    [MaxLength(2000)]
     public string? GatewayResponse { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
-
     public DateTime? CompletedAt { get; private set; }
-
     public DateTime? FailedAt { get; private set; }
 
-    private PaymentAttempt()
-    {
-    }
+    private PaymentAttempt() { }
 
     public PaymentAttempt(
         Guid paymentId,

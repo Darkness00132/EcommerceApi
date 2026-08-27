@@ -1,4 +1,4 @@
-﻿namespace Application.Constants;
+namespace Application.Constants;
 
 internal static class CacheNames
 {

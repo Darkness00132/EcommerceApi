@@ -1,4 +1,4 @@
-﻿using Domain.Entities.NewsletterAggregate;
+using Domain.Entities.NewsletterAggregate;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,9 +8,6 @@ public sealed class NewsletterSubscriberConfiguration : IEntityTypeConfiguration
 {
     public void Configure(EntityTypeBuilder<NewsletterSubscriber> builder)
     {
-        builder.Property(x => x.Email)
-            .HasMaxLength(256);
-
         builder.HasIndex(x => x.Email)
             .IsUnique();
     }

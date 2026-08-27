@@ -1,17 +1,16 @@
+using System.Reflection;
 using Application.Abstractions.Services;
 using Ecommerce.Api.Constants;
 using Ecommerce.Api.ExceptionHandling;
 using Ecommerce.Api.Services;
 using Hangfire;
 using Serilog;
-using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddAntiforgery(options =>
-{
+builder.Services.AddAntiforgery(options => {
     options.Cookie.Name = AccountApiConstants.AntiforgeryCookieName;
 
     options.HeaderName = AccountApiConstants.AntiforgeryHeaderName;
@@ -27,8 +26,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen(options =>
-{
+builder.Services.AddSwaggerGen(options => {
     var xmlFileName =
         $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
 
@@ -41,8 +39,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddSerilog(configuration =>
-{
+builder.Services.AddSerilog(configuration => {
     configuration.WriteTo.Console();
 });
 
@@ -52,8 +49,7 @@ app.UseExceptionHandler();
 
 app.UseSwagger();
 
-app.UseSwaggerUI(options =>
-{
+app.UseSwaggerUI(options => {
     options.RoutePrefix = string.Empty;
 
     options.SwaggerEndpoint(
@@ -61,8 +57,7 @@ app.UseSwaggerUI(options =>
         "Ecommerce API v1");
 });
 
-if (app.Environment.IsProduction())
-{
+if (app.Environment.IsProduction()) {
     app.UseHsts();
 }
 
@@ -75,8 +70,7 @@ app.UseAuthorization();
 
 app.UseHangfireDashboard(
     "/hangfire",
-    new DashboardOptions
-    {
+    new DashboardOptions {
         DashboardTitle = "Ecommerce Background Jobs",
         AppPath = "/"
     });

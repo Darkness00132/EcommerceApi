@@ -1,14 +1,13 @@
-﻿using FluentValidation;
+using FluentValidation;
 
-namespace Application.Features.Account.Commands.Register
+namespace Application.Features.Account.Commands.Register;
+
+internal class RegisterAccountValidator : AbstractValidator<RegisterAccountCommand>
 {
-    internal class RegisterAccountValidator : AbstractValidator<RegisterAccountCommand>
+    public RegisterAccountValidator()
     {
-        public RegisterAccountValidator()
-        {
-            RuleFor(x => x.Email)
-                .NotEmpty()
-                .EmailAddress();
-        }
+        RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress();
     }
 }

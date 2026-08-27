@@ -1,6 +1,6 @@
-﻿using MediatR;
-using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Behaviors;
 
@@ -18,21 +18,18 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
         var requestName = typeof(TRequest).Name;
         var stopwatch = Stopwatch.StartNew();
 
-        try
-        {
+        try {
             var response = await next();
 
             stopwatch.Stop();
 
-            if (stopwatch.ElapsedMilliseconds >= 500)
-            {
+            if (stopwatch.ElapsedMilliseconds >= 500) {
                 _logger.LogWarning(
                     "Slow request: {RequestName} took {ElapsedMs}ms",
                     requestName,
                     stopwatch.ElapsedMilliseconds);
             }
-            else
-            {
+            else {
                 _logger.LogDebug(
                     "Request {RequestName} completed in {ElapsedMs}ms",
                     requestName,
@@ -41,8 +38,7 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
 
             return response;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             stopwatch.Stop();
 
             _logger.LogError(

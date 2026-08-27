@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 public interface ICacheableQuery<TResponse>
     : IRequest<TResponse>
@@ -8,6 +8,7 @@ public interface ICacheableQuery<TResponse>
     IReadOnlyCollection<string> Tags { get; }
 
     CacheOptions CacheOptions { get; }
+    bool BypassCache { get; }
 }
 
 public sealed record CacheOptions
