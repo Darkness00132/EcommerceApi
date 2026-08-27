@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.Constants;
 using Application.Exceptions;
@@ -43,26 +43,24 @@ internal class UpdateCategoryCommandHandler
 
         string? newImageKey = null;
 
-        if (request.NewImage is not null && request.NewImage.Length > 0) 
-        {
-            var manipulatedImage = await _imageReferenceService.ResizeImage(request.NewImage,ImageType.Category);
+        if (request.NewImage is not null && request.NewImage.Length > 0) {
+            var manipulatedImage = await _imageReferenceService.ResizeImageAsync(request.NewImage, ImageType.Category);
             newImageKey = await _storageService.UploadAsync(manipulatedImage, FileDestination.Categories);
         }
 
-        category.Update(
-            nameEn:request.NameEn,
-            nameAr:request.NameAr,
-            imageKey:newImageKey,
-            descriptionEn:request.DescriptionEn,
-            descriptionAr:request.DescriptionAr);
+        category.UpdateDetails(
+            nameEn: request.NameEn ?? category.NameEn,
+            nameAr: request.NameAr ?? category.NameAr,
+            descriptionEn: request.DescriptionEn ?? category.DescriptionEn,
+            descriptionAr: request.DescriptionAr ?? category.DescriptionAr);
 
-        try
-        {
+        category.UpdateImageKey(newImageKey ?? category.ImageKey);
+
+        try {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
-        catch
-        {
-            if(newImageKey is not null)
+        catch {
+            if (newImageKey is not null)
                 await _storageService.DeleteAsync(newImageKey);
             throw;
         }

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
@@ -17,10 +17,17 @@ public sealed class CachingBehavior<TRequest, TResponse>(
     {
         var requestName = typeof(TRequest).Name;
 
-        if (string.IsNullOrWhiteSpace(request.CacheKey))
-        {
+        if (string.IsNullOrWhiteSpace(request.CacheKey)) {
             logger.LogWarning(
                 "Skipping cache for {RequestName} because cache key is empty.",
+                requestName);
+
+            return await next();
+        }
+
+        if (request.BypassCache) {
+            logger.LogDebug(
+                "Skipping cache for {RequestName}.",
                 requestName);
 
             return await next();
@@ -31,8 +38,7 @@ public sealed class CachingBehavior<TRequest, TResponse>(
             requestName,
             request.CacheKey);
 
-        var options = new HybridCacheEntryOptions
-        {
+        var options = new HybridCacheEntryOptions {
             Expiration = request.CacheOptions.AbsoluteExpiration,
             LocalCacheExpiration = request.CacheOptions.SlidingExpiration
         };
@@ -43,8 +49,7 @@ public sealed class CachingBehavior<TRequest, TResponse>(
 
         return await cache.GetOrCreateAsync(
             request.CacheKey,
-            async _ =>
-            {
+            async _ => {
                 logger.LogDebug(
                     "Cache miss for {RequestName}. CacheKey: {CacheKey}",
                     requestName,

@@ -1,4 +1,4 @@
-﻿using Domain.Entities.Carts;
+using Domain.Entities.Carts;
 using Domain.Entities.Catalog;
 using Domain.Entities.Identity;
 using Domain.Entities.InventoryAggregate;
@@ -134,7 +134,7 @@ public sealed class ApplicationDbContext
     private static void ConfigureInventoryRelationships(ModelBuilder builder)
     {
         builder.Entity<Product>()
-            .HasOne<Inventory>()
+            .HasOne(x => x.Inventory)
             .WithOne(x => x.Product)
             .HasForeignKey<Inventory>(x => x.ProductId)
             .OnDelete(DeleteBehavior.Restrict);

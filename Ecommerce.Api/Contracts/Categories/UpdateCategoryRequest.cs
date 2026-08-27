@@ -1,4 +1,5 @@
-﻿namespace Api.Contracts.Categories;
+namespace Api.Contracts.Categories;
+
 public sealed record UpdateCategoryRequest(
     string? NameEn,
     string? NameAr,

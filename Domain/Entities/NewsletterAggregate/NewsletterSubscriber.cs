@@ -1,10 +1,13 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Exceptions;
 
 namespace Domain.Entities.NewsletterAggregate;
 
 public sealed class NewsletterSubscriber : AggregateRoot
 {
+    [EmailAddress]
+    [MaxLength(256)]
     public string Email { get; private set; } = null!;
 
     public bool IsSubscribed { get; private set; }

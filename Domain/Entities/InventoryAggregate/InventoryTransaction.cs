@@ -1,4 +1,5 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Enums;
 using Domain.Exceptions;
 
@@ -22,14 +23,14 @@ public sealed class InventoryTransaction : Entity
 
     public Guid? GoodsReceiptId { get; private set; }
 
+    [MaxLength(500)]
     public string? Notes { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
 
-    private InventoryTransaction()
-    {
-    }
-    public InventoryTransaction(
+    internal InventoryTransaction() { }
+
+    internal InventoryTransaction(
         Guid inventoryId,
         InventoryTransactionType type,
         int quantityChange,
@@ -40,6 +41,9 @@ public sealed class InventoryTransaction : Entity
         string? notes = null)
         : base(Guid.NewGuid())
     {
+        if (inventoryId == Guid.Empty)
+            throw new DomainException("Inventory ID cannot be empty.");
+
         if (quantityBefore < 0)
             throw new DomainException("Quantity before cannot be negative.");
 

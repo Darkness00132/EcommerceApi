@@ -1,9 +1,8 @@
-﻿namespace Application.Constants
+namespace Application.Constants;
+
+public enum ImageType
 {
-    public enum ImageType
-    {
-        Category,
-        Product,
-        Thumbnail
-    }
+    Category,
+    Product,
+    Thumbnail
 }

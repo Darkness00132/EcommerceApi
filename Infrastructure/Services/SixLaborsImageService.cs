@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Services;
+using Application.Abstractions.Services;
 using Application.Common.Files;
 using Application.Constants;
 using SixLabors.ImageSharp;
@@ -9,23 +9,21 @@ namespace Infrastructure.Services;
 
 internal sealed class SixLaborsImageService : IImageManipulationService
 {
-    public async Task<FileDto> ResizeImage(
+    public async Task<FileDto> ResizeImageAsync(
         FileDto file,
         ImageType type,
         CancellationToken cancellationToken = default)
     {
         using var image = await Image.LoadAsync(file.Content, cancellationToken);
 
-        var width = type switch
-        {
+        var width = type switch {
             ImageType.Product => 800,
             ImageType.Category => 500,
             ImageType.Thumbnail => 300,
             _ => 800
         };
 
-        if (image.Width > width)
-        {
+        if (image.Width > width) {
             image.Mutate(x => x.Resize(width, 0));
         }
 
@@ -33,8 +31,7 @@ internal sealed class SixLaborsImageService : IImageManipulationService
 
         await image.SaveAsWebpAsync(
             output,
-            new WebpEncoder
-            {
+            new WebpEncoder {
                 Quality = 80
             },
             cancellationToken);

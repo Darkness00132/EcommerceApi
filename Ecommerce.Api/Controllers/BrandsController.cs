@@ -1,4 +1,4 @@
-﻿using Api.Contracts.Common;
+using Api.Contracts.Common;
 using Application.Common.Pagination;
 using Application.Features.Brands.Dtos;
 using Application.Features.Brands.Queries.GetBrandById;
@@ -34,11 +34,11 @@ public sealed class BrandsController : ControllerBase
     /// <response code="200">Returns the brands.</response>
     /// <response code="400">The pagination request is invalid.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<BrandDto>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<BrandDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<BrandDto>>> GetBrands(CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(new GetBrandsQuery(),cancellationToken);
+        var result = await _sender.Send(new GetBrandsQuery(), cancellationToken);
 
         return Ok(result);
     }

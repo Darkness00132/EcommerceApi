@@ -1,4 +1,5 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Enums;
 using Domain.Exceptions;
@@ -7,6 +8,8 @@ namespace Domain.Entities.InventoryAggregate;
 
 public sealed class Inventory : AggregateRoot
 {
+    private readonly List<InventoryTransaction> _transactions = new();
+
     public Guid ProductId { get; private set; }
 
     public Product Product { get; private set; } = null!;
@@ -15,21 +18,25 @@ public sealed class Inventory : AggregateRoot
 
     public int ReorderLevel { get; private set; }
 
+    [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
 
-    public ICollection<InventoryTransaction> Transactions { get; private set; } = new List<InventoryTransaction>();
+    public IReadOnlyCollection<InventoryTransaction> Transactions => _transactions.AsReadOnly();
 
-    private Inventory() { }
+    internal Inventory() { }
 
     public Inventory(Guid productId, int quantityOnHand, int reorderLevel)
+        : base(Guid.NewGuid())
     {
+        if (productId == Guid.Empty)
+            throw new DomainException("Product ID cannot be empty.");
+
         if (quantityOnHand < 0)
             throw new DomainException("Quantity on hand cannot be negative.");
 
         if (reorderLevel < 0)
             throw new DomainException("Reorder level cannot be negative.");
 
-        Id = Guid.NewGuid();
         ProductId = productId;
         QuantityOnHand = quantityOnHand;
         ReorderLevel = reorderLevel;
@@ -117,7 +124,7 @@ public sealed class Inventory : AggregateRoot
         Guid? goodsReceiptId,
         string? notes)
     {
-        Transactions.Add(new InventoryTransaction(
+        _transactions.Add(new InventoryTransaction(
             inventoryId: Id,
             type: type,
             quantityChange: quantityChange,

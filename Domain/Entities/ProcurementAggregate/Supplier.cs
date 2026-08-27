@@ -1,22 +1,30 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Exceptions;
 
 namespace Domain.Entities.ProcurementAggregate;
 
 public sealed class Supplier : AggregateRoot
 {
+    [MaxLength(200)]
     public string Name { get; private set; } = null!;
 
+    [MaxLength(150)]
     public string? ContactName { get; private set; }
 
+    [MaxLength(256)]
     public string? Email { get; private set; }
 
+    [MaxLength(20)]
     public string? Phone { get; private set; }
 
+    [MaxLength(250)]
     public string? Address { get; private set; }
 
+    [MaxLength(100)]
     public string? City { get; private set; }
 
+    [MaxLength(100)]
     public string? TaxNumber { get; private set; }
 
     public bool IsActive { get; private set; }
@@ -25,9 +33,11 @@ public sealed class Supplier : AggregateRoot
 
     public DateTime? UpdatedAt { get; private set; }
 
-    public ICollection<PurchaseOrder> PurchaseOrders { get; private set; } = new List<PurchaseOrder>();
+    public ICollection<PurchaseOrder> PurchaseOrders { get; private set; }
+        = new List<PurchaseOrder>();
 
     private Supplier() { }
+
     public Supplier(
         string name,
         string? contactName = null,
@@ -38,16 +48,14 @@ public sealed class Supplier : AggregateRoot
         string? taxNumber = null)
         : base(Guid.NewGuid())
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("Supplier name is required.");
+        Name = ValidateRequiredText(name, 200, "Supplier name");
+        ContactName = ValidateOptionalText(contactName, 150, "Contact name");
+        Email = ValidateOptionalText(email, 256, "Email");
+        Phone = ValidateOptionalText(phone, 20, "Phone");
+        Address = ValidateOptionalText(address, 250, "Address");
+        City = ValidateOptionalText(city, 100, "City");
+        TaxNumber = ValidateOptionalText(taxNumber, 100, "Tax number");
 
-        Name = name.Trim();
-        ContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
-        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
-        Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
-        Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
-        City = string.IsNullOrWhiteSpace(city) ? null : city.Trim();
-        TaxNumber = string.IsNullOrWhiteSpace(taxNumber) ? null : taxNumber.Trim();
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
     }
@@ -61,16 +69,14 @@ public sealed class Supplier : AggregateRoot
         string? city = null,
         string? taxNumber = null)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("Supplier name is required.");
+        Name = ValidateRequiredText(name, 200, "Supplier name");
+        ContactName = ValidateOptionalText(contactName, 150, "Contact name");
+        Email = ValidateOptionalText(email, 256, "Email");
+        Phone = ValidateOptionalText(phone, 20, "Phone");
+        Address = ValidateOptionalText(address, 250, "Address");
+        City = ValidateOptionalText(city, 100, "City");
+        TaxNumber = ValidateOptionalText(taxNumber, 100, "Tax number");
 
-        Name = name.Trim();
-        ContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
-        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
-        Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
-        Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
-        City = string.IsNullOrWhiteSpace(city) ? null : city.Trim();
-        TaxNumber = string.IsNullOrWhiteSpace(taxNumber) ? null : taxNumber.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -84,5 +90,41 @@ public sealed class Supplier : AggregateRoot
     {
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static string ValidateRequiredText(
+        string value,
+        int maxLength,
+        string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new DomainException($"{fieldName} is required.");
+
+        var trimmedValue = value.Trim();
+
+        if (trimmedValue.Length > maxLength) {
+            throw new DomainException(
+                $"{fieldName} cannot exceed {maxLength} characters.");
+        }
+
+        return trimmedValue;
+    }
+
+    private static string? ValidateOptionalText(
+        string? value,
+        int maxLength,
+        string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmedValue = value.Trim();
+
+        if (trimmedValue.Length > maxLength) {
+            throw new DomainException(
+                $"{fieldName} cannot exceed {maxLength} characters.");
+        }
+
+        return trimmedValue;
     }
 }

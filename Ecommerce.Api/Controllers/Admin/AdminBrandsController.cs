@@ -1,4 +1,4 @@
-﻿using Application.Features.Brands.Commands.CreateBrand;
+using Application.Features.Brands.Commands.CreateBrand;
 using Application.Features.Brands.Commands.UpdateBrand;
 using Domain.Constants;
 using MediatR;

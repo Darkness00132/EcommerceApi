@@ -1,4 +1,4 @@
-﻿using Application.Exceptions;
+using Application.Exceptions;
 using Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -27,8 +27,7 @@ public sealed class GlobalExceptionHandler(
             problemDetails.Status ?? 500;
 
         return await problemDetailsService.TryWriteAsync(
-            new ProblemDetailsContext
-            {
+            new ProblemDetailsContext {
                 HttpContext = httpContext,
                 Exception = exception,
                 ProblemDetails = problemDetails
@@ -39,8 +38,7 @@ public sealed class GlobalExceptionHandler(
         HttpContext context,
         Exception exception)
     {
-        return exception switch
-        {
+        return exception switch {
             ValidationException validationException
                 => CreateValidationProblemDetails(context, validationException),
 
@@ -86,8 +84,7 @@ public sealed class GlobalExceptionHandler(
         int statusCode,
         string detail)
     {
-        return new ProblemDetails
-        {
+        return new ProblemDetails {
             Type = $"https://httpstatuses.com/{statusCode}",
             Title = ReasonPhrases.GetReasonPhrase(statusCode),
             Status = statusCode,
@@ -102,16 +99,13 @@ public sealed class GlobalExceptionHandler(
     {
         var modelState = new ModelStateDictionary();
 
-        foreach (var error in exception.Errors)
-        {
-            foreach (var message in error.Value)
-            {
+        foreach (var error in exception.Errors) {
+            foreach (var message in error.Value) {
                 modelState.AddModelError(error.Key, message);
             }
         }
 
-        return new ValidationProblemDetails(modelState)
-        {
+        return new ValidationProblemDetails(modelState) {
             Type = "https://httpstatuses.com/400",
             Title = "Validation Failed",
             Status = StatusCodes.Status400BadRequest,
@@ -125,14 +119,12 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         int statusCode)
     {
-        if (statusCode >= 500)
-        {
+        if (statusCode >= 500) {
             logger.LogError(
                 exception,
                 "Unhandled exception");
         }
-        else
-        {
+        else {
             logger.LogWarning(
                 exception,
                 "Handled exception");

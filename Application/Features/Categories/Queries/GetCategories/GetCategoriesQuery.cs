@@ -1,4 +1,4 @@
-﻿using Application.Constants;
+using Application.Constants;
 using Application.Features.Categories.Dtos;
 
 namespace Application.Features.Categories.Queries.GetCategories;
@@ -13,8 +13,9 @@ public sealed record GetCategoriesQuery
         CacheNames.Categories
     ];
 
-    public CacheOptions CacheOptions => new CacheOptions
-    {
+    public CacheOptions CacheOptions => new CacheOptions {
         AbsoluteExpiration = TimeSpan.FromDays(7)
     };
+
+    public bool BypassCache => false;
 }

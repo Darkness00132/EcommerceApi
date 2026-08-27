@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Application.Abstractions.Services;
 using Application.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -21,8 +21,7 @@ public sealed class CurrentUserService : ICurrentUserService
 
     public Guid UserId
     {
-        get
-        {
+        get {
             var userId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
             return Guid.TryParse(userId, out var id)

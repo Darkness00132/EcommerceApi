@@ -1,4 +1,4 @@
-﻿using Application;
+using Application;
 using Application.Behaviors;
 using Application.Features.Account.Services;
 using Application.Settings;
@@ -14,15 +14,13 @@ public static class DI
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
 
-        services.AddStackExchangeRedisCache(options =>
-        {
+        services.AddStackExchangeRedisCache(options => {
             options.Configuration = configuration.GetConnectionString("Redis");
         });
         services.AddHybridCache();
 
-        services.AddAutoMapper(config=>config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
-        services.AddMediatR(config =>
-        {
+        services.AddAutoMapper(config => config.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
+        services.AddMediatR(config => {
             config.RegisterServicesFromAssembly(typeof(AssemblyReference).Assembly);
 
             config.AddOpenBehavior(typeof(LoggingBehavior<,>));

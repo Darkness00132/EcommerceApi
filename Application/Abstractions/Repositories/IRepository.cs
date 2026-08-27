@@ -1,7 +1,7 @@
-﻿using Api.Contracts.Common;
+using System.Linq.Expressions;
+using Api.Contracts.Common;
 using Application.Common.Pagination;
 using Domain.Common;
-using System.Linq.Expressions;
 
 namespace Application.Abstractions.Repositories;
 
@@ -27,7 +27,7 @@ public interface IRepository<TEntity>
         CancellationToken cancellationToken = default)
         where TResponse : class;
 
-    Task<PagedResult<TResponse>> ProjectToPagedWithPaginationAsync<TResponse>(
+    Task<PagedResult<TResponse>> ProjectToPagedAsync<TResponse>(
         PaginationRequest pagination,
         Expression<Func<TEntity, object>> orderBy,
         Expression<Func<TEntity, bool>>? predicate = null,
@@ -35,7 +35,7 @@ public interface IRepository<TEntity>
         CancellationToken cancellationToken = default)
         where TResponse : class;
 
-    Task<IReadOnlyList<TResponse>> ProjectToPagedAsync<TResponse>(
+    Task<IReadOnlyList<TResponse>> ProjectToListAsync<TResponse>(
         Expression<Func<TEntity, object>> orderBy,
         Expression<Func<TEntity, bool>>? predicate = null,
         bool descending = false,
@@ -44,6 +44,9 @@ public interface IRepository<TEntity>
 
     Task AddAsync(
         TEntity entity,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default);
 
     void Remove(TEntity entity);

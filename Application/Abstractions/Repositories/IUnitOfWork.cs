@@ -1,4 +1,4 @@
-﻿namespace Application.Abstractions.Repositories;
+namespace Application.Abstractions.Repositories;
 
 public interface IUnitOfWork
 {

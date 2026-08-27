@@ -1,4 +1,4 @@
-﻿using Application.Features.Discounts.Commands.CreateDiscount;
+using Application.Features.Discounts.Commands.CreateDiscount;
 using Domain.Enums;
 using FluentValidation;
 

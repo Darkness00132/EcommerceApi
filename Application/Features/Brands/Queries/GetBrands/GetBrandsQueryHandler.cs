@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Features.Brands.Dtos;
 using Domain.Entities.Catalog;
 using MediatR;
@@ -19,7 +19,7 @@ internal class GetBrandsQueryHandler
         GetBrandsQuery request,
         CancellationToken cancellationToken)
     {
-        return await _brandRepository.ProjectToPagedAsync<BrandDto>(
+        return await _brandRepository.ProjectToListAsync<BrandDto>(
             orderBy: brand => brand.NameEn,
             cancellationToken: cancellationToken);
     }

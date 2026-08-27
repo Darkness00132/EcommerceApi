@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Features.Categories.Dtos;
 using Domain.Entities.Catalog;
 using MediatR;
@@ -19,7 +19,7 @@ internal class GetCategoriesQueryHandler
         GetCategoriesQuery request,
         CancellationToken cancellationToken)
     {
-        return await _categoryRepository.ProjectToPagedAsync<CategoryDto>(
+        return await _categoryRepository.ProjectToListAsync<CategoryDto>(
             orderBy: category => category.NameEn,
             cancellationToken: cancellationToken);
     }

@@ -1,4 +1,4 @@
-﻿using Domain.Common;
+using Domain.Common;
 using Domain.Entities.Identity;
 using Domain.Exceptions;
 
@@ -6,18 +6,21 @@ namespace Domain.Entities.Carts;
 
 public sealed class Cart : IEntity
 {
+    private readonly List<CartItem> _items = new();
+
     public Guid UserId { get; private set; }
 
     public AppUser User { get; private set; } = null!;
 
-    public ICollection<CartItem> Items { get; private set; } = new List<CartItem>();
+    public IReadOnlyCollection<CartItem> Items => _items.AsReadOnly();
 
-    private Cart()
-    {
-    }
+    private Cart() { }
 
     public Cart(Guid userId)
     {
+        if (userId == Guid.Empty)
+            throw new DomainException("User ID cannot be empty.");
+
         UserId = userId;
     }
 
@@ -27,6 +30,9 @@ public sealed class Cart : IEntity
         decimal unitPrice,
         decimal discountAmount = 0)
     {
+        if (productId == Guid.Empty)
+            throw new DomainException("Product ID cannot be empty.");
+
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
 
@@ -36,15 +42,17 @@ public sealed class Cart : IEntity
         if (discountAmount < 0)
             throw new DomainException("Discount amount cannot be negative.");
 
-        var existingItem = Items.FirstOrDefault(x => x.ProductId == productId);
+        if (discountAmount > unitPrice)
+            throw new DomainException("Discount amount cannot exceed unit price.");
 
-        if (existingItem is not null)
-        {
+        var existingItem = _items.FirstOrDefault(x => x.ProductId == productId);
+
+        if (existingItem is not null) {
             existingItem.IncreaseQuantity(quantity);
             return;
         }
 
-        Items.Add(new CartItem(
+        _items.Add(new CartItem(
             cartId: UserId,
             productId: productId,
             quantity: quantity,
@@ -54,10 +62,13 @@ public sealed class Cart : IEntity
 
     public void UpdateItemQuantity(Guid productId, int quantity)
     {
+        if (productId == Guid.Empty)
+            throw new DomainException("Product ID cannot be empty.");
+
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
 
-        var item = Items.FirstOrDefault(x => x.ProductId == productId);
+        var item = _items.FirstOrDefault(x => x.ProductId == productId);
 
         if (item is null)
             throw new DomainException("Cart item was not found.");
@@ -67,16 +78,18 @@ public sealed class Cart : IEntity
 
     public void RemoveItem(Guid productId)
     {
-        var item = Items.FirstOrDefault(x => x.ProductId == productId);
+        if (productId == Guid.Empty) return;
+
+        var item = _items.FirstOrDefault(x => x.ProductId == productId);
 
         if (item is null)
             return;
 
-        Items.Remove(item);
+        _items.Remove(item);
     }
 
     public void Clear()
     {
-        Items.Clear();
+        _items.Clear();
     }
 }

@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Exceptions;
 using Application.Features.Brands.Dtos;
 using Domain.Entities.Catalog;

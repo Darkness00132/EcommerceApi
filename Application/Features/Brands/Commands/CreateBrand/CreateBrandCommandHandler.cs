@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Exceptions;
 using Domain.Entities.Catalog;
 using MediatR;

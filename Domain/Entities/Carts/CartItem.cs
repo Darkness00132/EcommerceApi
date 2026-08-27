@@ -1,7 +1,8 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.Carts;
 
@@ -17,8 +18,10 @@ public sealed class CartItem : IEntity
 
     public int Quantity { get; private set; }
 
+    [Precision(18,2)]
     public decimal UnitPrice { get; private set; }
 
+    [Precision(18, 2)]
     public decimal DiscountAmount { get; private set; }
 
     [NotMapped]
@@ -30,9 +33,7 @@ public sealed class CartItem : IEntity
     [NotMapped]
     public decimal LineTotal => LineSubtotal - LineDiscount;
 
-    private CartItem()
-    {
-    }
+    private CartItem() { }
 
     public CartItem(
         Guid cartId,
@@ -41,6 +42,12 @@ public sealed class CartItem : IEntity
         decimal unitPrice,
         decimal discountAmount = 0)
     {
+        if (cartId == Guid.Empty)
+            throw new DomainException("Cart ID cannot be empty.");
+
+        if (productId == Guid.Empty)
+            throw new DomainException("Product ID cannot be empty.");
+
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
 
@@ -49,6 +56,9 @@ public sealed class CartItem : IEntity
 
         if (discountAmount < 0)
             throw new DomainException("Discount amount cannot be negative.");
+
+        if (discountAmount > unitPrice)
+            throw new DomainException("Discount amount cannot exceed unit price.");
 
         CartId = cartId;
         ProductId = productId;
@@ -80,6 +90,9 @@ public sealed class CartItem : IEntity
 
         if (discountAmount < 0)
             throw new DomainException("Discount amount cannot be negative.");
+
+        if (discountAmount > unitPrice)
+            throw new DomainException("Discount amount cannot exceed unit price.");
 
         UnitPrice = unitPrice;
         DiscountAmount = discountAmount;

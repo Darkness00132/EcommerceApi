@@ -1,10 +1,10 @@
-﻿using Application.Abstractions.Repositories;
+using System.Security.Cryptography;
+using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.Features.Account.Dto;
 using Application.Settings;
 using Domain.Entities.Identity;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
 
 namespace Application.Features.Account.Services;
 

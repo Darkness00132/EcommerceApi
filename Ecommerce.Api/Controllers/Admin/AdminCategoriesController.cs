@@ -83,7 +83,7 @@ public sealed class AdminCategoriesController : ControllerBase
         [FromForm] UpdateCategoryRequest request,
         CancellationToken cancellationToken)
     {
-        var command = _mapper.Map<UpdateCategoryCommand>(request) with { Id=id};
+        var command = _mapper.Map<UpdateCategoryCommand>(request) with { Id = id };
         await _sender.Send(cancellationToken);
 
         return NoContent();

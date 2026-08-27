@@ -1,12 +1,20 @@
-﻿using Domain.Exceptions;
+using System.ComponentModel.DataAnnotations;
+using Domain.Exceptions;
 
 namespace Domain.ValueObjects;
 
 public sealed record Address
 {
+    [MaxLength(250)]
     public string Street { get; private init; }
+
+    [MaxLength(100)]
     public string City { get; private init; }
+
+    [MaxLength(20)]
     public string Phone { get; private init; }
+
+    [MaxLength(250)]
     public string? Notes { get; private init; }
 
     private Address()

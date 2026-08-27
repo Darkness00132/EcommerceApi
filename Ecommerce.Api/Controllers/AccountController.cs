@@ -1,4 +1,4 @@
-﻿using Application.Features.Account.Commands.ConfirmEmail;
+using Application.Features.Account.Commands.ConfirmEmail;
 using Application.Features.Account.Commands.ForgotPassword;
 using Application.Features.Account.Commands.Login;
 using Application.Features.Account.Commands.RefreshToken;
@@ -21,7 +21,6 @@ namespace Ecommerce.Api.Controllers;
 /// authentication, token management, email confirmation, and password recovery.
 /// </summary>
 [ApiController]
-[AllowAnonymous]
 [Route("api/account")]
 public sealed class AccountController(
     ISender sender,
@@ -33,6 +32,7 @@ public sealed class AccountController(
     /// <param name="command">The registration details.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>A successful response when the account is created.</returns>
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult> Register(
         RegisterAccountCommand command,
@@ -49,6 +49,7 @@ public sealed class AccountController(
     /// <param name="command">The email confirmation request.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>No content when the email address is successfully confirmed.</returns>
+    [AllowAnonymous]
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(
         ConfirmEmailCommand command,
@@ -65,6 +66,7 @@ public sealed class AccountController(
     /// <param name="command">The account credentials.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>The generated access and refresh tokens.</returns>
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<AccountTokenDto>> Login(
         LoginAccountCommand command,
@@ -81,6 +83,7 @@ public sealed class AccountController(
     /// <param name="command">The refresh token request.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>A newly generated token pair.</returns>
+    [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<ActionResult<AccountTokenDto>> Refresh(
         RefreshAccountTokenCommand command,
@@ -118,6 +121,7 @@ public sealed class AccountController(
     /// <param name="command">The password reset request.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>An accepted response.</returns>
+    [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
         ForgotPasswordCommand command,
@@ -134,6 +138,7 @@ public sealed class AccountController(
     /// <param name="command">The password reset details.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>No content when the password is successfully reset.</returns>
+    [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(
         ResetPasswordCommand command,
@@ -165,6 +170,7 @@ public sealed class AccountController(
     /// Generates an anti-forgery token for browser-based authentication flows.
     /// </summary>
     /// <returns>The generated anti-forgery request token.</returns>
+    [AllowAnonymous]
     [HttpGet("csrf-web")]
     public ActionResult<CsrfTokenResponse> Csrf()
     {
@@ -180,6 +186,7 @@ public sealed class AccountController(
     /// <param name="command">The account credentials.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>The access token information for the browser client.</returns>
+    [AllowAnonymous]
     [HttpPost("login-web")]
     [ValidateAntiForgeryToken]
     public async Task<ActionResult<WebAccountResponse>> LoginWeb(
@@ -200,6 +207,7 @@ public sealed class AccountController(
     /// </summary>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>A new access token.</returns>
+    [AllowAnonymous]
     [HttpPost("refresh-web")]
     [ValidateAntiForgeryToken]
     public async Task<ActionResult<WebAccountResponse>> RefreshWeb(
@@ -207,8 +215,7 @@ public sealed class AccountController(
     {
         if (!Request.Cookies.TryGetValue(
                 AccountApiConstants.RefreshTokenCookieName,
-                out var refreshToken))
-        {
+                out var refreshToken)) {
             return Unauthorized();
         }
 
@@ -236,8 +243,7 @@ public sealed class AccountController(
     {
         if (Request.Cookies.TryGetValue(
                 AccountApiConstants.RefreshTokenCookieName,
-                out var refreshToken))
-        {
+                out var refreshToken)) {
             await sender.Send(
                 new RevokeAccountTokenCommand(refreshToken),
                 cancellationToken);
@@ -254,8 +260,7 @@ public sealed class AccountController(
     /// <param name="tokens">The generated account tokens.</param>
     private void SetRefreshTokenCookie(AccountTokenDto tokens)
     {
-        var cookieOptions = new CookieOptions
-        {
+        var cookieOptions = new CookieOptions {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,

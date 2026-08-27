@@ -1,4 +1,4 @@
-﻿using Application.Constants;
+using Application.Constants;
 using Application.Features.Brands.Dtos;
 
 namespace Application.Features.Brands.Queries.GetBrandById;
@@ -10,8 +10,9 @@ public sealed record GetBrandByIdQuery(Guid Id)
 
     public IReadOnlyCollection<string> Tags => [Constants.CacheNames.Brands];
 
-    public CacheOptions CacheOptions => new CacheOptions 
-    {
+    public CacheOptions CacheOptions => new CacheOptions {
         AbsoluteExpiration = TimeSpan.FromDays(30),
     };
+
+    public bool BypassCache => false;
 }

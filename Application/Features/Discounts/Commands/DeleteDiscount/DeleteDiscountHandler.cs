@@ -1,4 +1,4 @@
-﻿using Application.Abstractions.Repositories;
+using Application.Abstractions.Repositories;
 using Application.Features.Discounts.Commands.DeleteDiscount;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
@@ -44,8 +44,7 @@ internal sealed class DeleteDiscountHandler
             request.Id,
             cancellationToken);
 
-        if (discount is null)
-        {
+        if (discount is null) {
             throw new DomainException("Discount was not found.");
         }
 

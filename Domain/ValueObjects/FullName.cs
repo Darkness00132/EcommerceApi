@@ -1,10 +1,13 @@
-﻿using Domain.Exceptions;
+using System.ComponentModel.DataAnnotations;
+using Domain.Exceptions;
 
 namespace Domain.ValueObjects;
 
 public sealed record FullName
 {
+    [MaxLength(100)]
     public string FirstName { get; private init; }
+    [MaxLength(100)]
     public string LastName { get; private init; }
 
     private FullName()

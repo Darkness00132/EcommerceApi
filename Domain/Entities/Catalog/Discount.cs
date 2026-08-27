@@ -1,34 +1,37 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.Catalog;
 
 public sealed class Discount : Entity
 {
+    private readonly List<Product> _products = new();
+
+    [MaxLength(100)]
     public string Name { get; private set; } = null!;
 
     public DiscountType DiscountType { get; private set; }
 
+    [Precision(18,4)]
     public decimal Value { get; private set; }
 
     public DateRange ValidityPeriod { get; private set; } = null!;
 
-    public bool IsActive { get; private set; }
+    public bool IsVisible { get; private set; }
 
-    public ICollection<Product> Products { get; private set; } = new List<Product>();
+    public IReadOnlyCollection<Product> Products => _products.AsReadOnly();
 
-    [NotMapped]
     public DateOnly StartDate => ValidityPeriod.StartDate;
 
-    [NotMapped]
     public DateOnly EndDate => ValidityPeriod.EndDate;
 
-    private Discount()
-    {
-    }
+    public bool IsActive => IsValidOn(DateOnly.FromDateTime(DateTime.UtcNow));
+
+    private Discount() { } // Required for EF Core
 
     public Discount(
         string name,
@@ -36,25 +39,12 @@ public sealed class Discount : Entity
         decimal value,
         DateRange validityPeriod)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("Discount name is required.");
-
-        ValidateValue(discountType, value);
-
+        UpdateDetails(name, discountType, value, validityPeriod);
         Id = Guid.NewGuid();
-        Name = name.Trim();
-        DiscountType = discountType;
-        Value = value;
-        ValidityPeriod = validityPeriod;
-        IsActive = true;
+        IsVisible = true;
     }
 
-    public bool IsValidOn(DateOnly date)
-    {
-        return IsActive && ValidityPeriod.Contains(date);
-    }
-
-    public void Update(
+    public void UpdateDetails(
         string name,
         DiscountType discountType,
         decimal value,
@@ -63,6 +53,9 @@ public sealed class Discount : Entity
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Discount name is required.");
 
+        if (validityPeriod is null)
+            throw new DomainException("Validity period is required.");
+
         ValidateValue(discountType, value);
 
         Name = name.Trim();
@@ -71,15 +64,14 @@ public sealed class Discount : Entity
         ValidityPeriod = validityPeriod;
     }
 
-    public void Activate()
+    public bool IsValidOn(DateOnly date)
     {
-        IsActive = true;
+        return IsVisible && ValidityPeriod.Contains(date);
     }
 
-    public void Deactivate()
-    {
-        IsActive = false;
-    }
+    public void Activate() => IsVisible = true;
+
+    public void Deactivate() => IsVisible = false;
 
     private static void ValidateValue(DiscountType discountType, decimal value)
     {

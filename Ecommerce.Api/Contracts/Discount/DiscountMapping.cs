@@ -1,13 +1,12 @@
-﻿using Application.Features.Discounts.Commands.UpdateDiscount;
+using Application.Features.Discounts.Commands.UpdateDiscount;
 using AutoMapper;
 
-namespace Ecommerce.Api.Contracts.Discount
+namespace Ecommerce.Api.Contracts.Discount;
+
+public class DiscountMapping : Profile
 {
-    public class DiscountMapping : Profile
+    public DiscountMapping()
     {
-        public DiscountMapping()
-        {
-            CreateMap<UpdateDiscountRequest,UpdateDiscountCommand>();
-        }
+        CreateMap<UpdateDiscountRequest, UpdateDiscountCommand>();
     }
 }

@@ -1,4 +1,5 @@
-﻿using Domain.Common;
+using System.ComponentModel.DataAnnotations;
+using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Entities.Identity;
 using Domain.Exceptions;
@@ -17,9 +18,12 @@ public sealed class Review : AggregateRoot
 
     public int Rating { get; private set; }
 
+    [MaxLength(1000)]
     public string? Comment { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
+
+    public DateTime? UpdatedAt { get; private set; }
 
     private Review() { }
 
@@ -41,21 +45,41 @@ public sealed class Review : AggregateRoot
         UserId = userId;
         ProductId = productId;
         Rating = rating;
-        Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        Comment = ValidateComment(comment);
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void Update(int rating, string? comment = null)
+    public void Update(
+        int rating,
+        string? comment = null)
     {
         ValidateRating(rating);
 
         Rating = rating;
-        Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        Comment = ValidateComment(comment);
+        UpdatedAt = DateTime.UtcNow;
     }
 
     private static void ValidateRating(int rating)
     {
-        if (rating < 1 || rating > 5)
-            throw new DomainException("Rating must be between 1 and 5.");
+        if (rating < 1 || rating > 5) {
+            throw new DomainException(
+                "Rating must be between 1 and 5.");
+        }
+    }
+
+    private static string? ValidateComment(string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment))
+            return null;
+
+        var trimmedComment = comment.Trim();
+
+        if (trimmedComment.Length > 1000) {
+            throw new DomainException(
+                "Comment cannot exceed 1000 characters.");
+        }
+
+        return trimmedComment;
     }
 }

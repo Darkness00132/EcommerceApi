@@ -1,4 +1,4 @@
-﻿using Application.Common.Validation;
+using Application.Common.Validation;
 using FluentValidation;
 
 namespace Application.Features.Categories.Commands.UpdateCategory;
