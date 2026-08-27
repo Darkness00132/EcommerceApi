@@ -2,9 +2,10 @@ name: CodeQL
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "**" ]
+  workflow_dispatch:
 
 jobs:
   analyze:
@@ -12,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      security-events: write
       actions: read
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout repository
@@ -29,3 +31,5 @@ jobs:
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
+        with:
+          upload: false
