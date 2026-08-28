@@ -1,15 +1,15 @@
-name: CodeQL
+name: CodeQL Security Scan
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "**" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 jobs:
   analyze:
-    name: Analyze
+    name: CodeQL Analysis
     runs-on: ubuntu-latest
 
     permissions:
@@ -25,6 +25,8 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: csharp
+          build-mode: none
+          dependency-caching: true
 
       - name: Build
         uses: github/codeql-action/autobuild@v4
