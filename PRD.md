@@ -1,66 +1,92 @@
-# Product Requirements Document (PRD) - Ecommerce API
+﻿# ElectroShop — Product Requirements Document
 
-## Overview
-This Ecommerce API manages the back-end operations of a comprehensive e-commerce platform. It provides a robust, scalable architecture to handle users, catalogs, carts, sales orders, payments, promotions, reviews, inventory, procurement, and newsletters.
+## Vision & Purpose
+ElectroShop is a scalable e-commerce backend for digital and consumer electronics retail. It combines catalog, inventory, checkout, payments, procurement, identity, and customer engagement capabilities using Clean Architecture and domain-driven design principles.
 
-## Entities and Domains
+## Product Goals
+- Provide a reliable catalog and purchasing experience.
+- Prevent inventory depletion and overselling during concurrent checkouts.
+- Preserve product and pricing history for completed orders.
+- Support granular role-based access for business operations.
+- Keep persistence, storage, payment, and notification integrations replaceable.
 
-### 1. Identity Area
-- **APP_USER**: Manages user details (FirstName, LastName, Email, PhoneNumber, TwoFactorEnabled, Lockout details).
-- **APP_ROLE**: Manages roles for users (Name, ConcurrencyStamp).
-- **REFRESH_TOKEN**: Tracks refresh tokens for user authentication (Token, ExpiresAt, RevokedAt).
+## Functional Requirements
+### Identity & Access
+- Support registration, email confirmation, authentication, refresh sessions, and sign-out.
+- Support JWT bearer authentication for native clients.
+- Store web refresh tokens in secure, HttpOnly cookies.
+- Support two-factor authentication, lockout controls, roles, and policies.
 
-### 2. Catalog Area
-- **CATEGORY**: Categorization of products with English and Arabic names/descriptions and an ImageKey.
-- **BRAND**: Brands associated with products, supporting bilingual names.
-- **PRODUCT**: The core entity for items sold. Includes SKU, price, activity status, and references Category, Brand, and Discount.
-- **PRODUCT_IMAGE**: Manages multiple images per product.
-- **DISCOUNT**: Represents discounts applied to products (DiscountType, Value, Validity dates).
+### Catalog
+- Organize products by categories and brands.
+- Support bilingual catalog names and descriptions where applicable.
+- Support SKUs, prices, active status, dynamic attributes, and product galleries.
+- Support configurable discounts with values and validity periods.
+- Snapshot product names, SKUs, and prices when orders are created.
 
-### 3. Cart Area
-- **CART**: Associated 1:1 with an AppUser.
-- **CART_ITEM**: Items within a user's cart including quantity, unit price, and discount amount.
+### Cart & Checkout
+- Provide one persistent cart per customer.
+- Validate product availability and quantity limits.
+- Calculate subtotal, discounts, shipping fees, and totals.
+- Validate promo codes against minimum orders, usage limits, and validity periods.
+- Reserve stock during concurrent checkout attempts.
 
-### 4. Sales Orders Area
-- **ORDER**: Stores order details (Status, Subtotal, ShippingFee, Total, Address, DeliveryNotes, PromoCode).
-- **ORDER_ITEM**: Contains items purchased within an order.
+### Orders
+- Store delivery address, delivery notes, promo code, and financial totals.
+- Keep order lines immutable after creation.
+- Follow the state flow Pending → Processing → Shipped → Delivered or Cancelled.
+- Allow customers to view their orders and authorized staff to process them.
 
-### 5. Payments Area
-- **PAYMENT**: Records payments for an order (Status, Amount, PaidAt, RefundedAt).
-- **PAYMENT_ATTEMPT**: Detailed record of payment attempts (Method, GatewayResponse, TransactionId).
+### Payments
+- Record payment status, amount, paid date, refund date, and payment attempts.
+- Record payment methods, transaction identifiers, and gateway responses.
+- Abstract payment gateways behind application contracts.
+- Make payment callbacks and retries idempotent.
 
-### 6. Promotions Area
-- **PROMO_CODE**: Promo codes for orders (Code, DiscountType, MinimumOrder, UsageLimit, UsedCount, Validity dates).
+### Inventory & Procurement
+- Track available stock, reserved stock, reorder levels, and inventory transactions.
+- Reserve stock atomically and release reservations after failed or cancelled checkouts.
+- Manage suppliers, purchase orders, purchase order items, goods receipts, and received quantities.
+- Update inventory through auditable transactions when goods are received.
 
-### 7. Reviews Area
-- **REVIEW**: User reviews for products, including rating and comment.
+### Reviews, Newsletter & Media
+- Allow eligible customers to review purchased products.
+- Allow support agents to moderate reviews.
+- Support newsletter subscription, unsubscribe, and duplicate prevention.
+- Validate media MIME types and file sizes and return secure URI references.
+- Support local storage in development and Azure Blob Storage in production.
 
-### 8. Inventory Area
-- **INVENTORY**: Tracks available stock and reorder levels per product.
-- **INVENTORY_TRANSACTION**: Logs all changes to inventory (e.g., due to orders or goods receipts).
+## Domain Entities
+- **Identity:** AppUser, AppRole, RefreshToken
+- **Catalog:** Category, Brand, Product, ProductImage, Discount
+- **Commerce:** Cart, CartItem, Order, OrderItem, PromoCode
+- **Payments:** Payment, PaymentAttempt
+- **Operations:** Inventory, InventoryTransaction, Supplier, PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem
+- **Engagement:** Review, NewsletterSubscriber
 
-### 9. Procurement Area
-- **SUPPLIER**: Vendor details (Name, Contact, TaxNumber).
-- **PURCHASE_ORDER**: POs sent to suppliers.
-- **PURCHASE_ORDER_ITEM**: Items within a PO.
-- **GOODS_RECEIPT**: Records of received goods against a PO.
-- **GOODS_RECEIPT_ITEM**: Detailed items received.
+## Roles
+| Role | Responsibilities |
+|---|---|
+| SuperAdmin / Admin | Full administrative control |
+| CatalogManager | Categories, brands, products, discounts, and images |
+| InventoryManager | Stock, reservations, alerts, and transactions |
+| ProcurementManager | Suppliers, purchase orders, and goods receipts |
+| SalesManager | Orders, payments, refunds, and promo codes |
+| SupportAgent | Customer orders, reviews, and support |
+| Customer | Browsing, cart, checkout, payments, and reviews |
 
-### 10. Newsletter Area
-- **NEWSLETTER_SUBSCRIBER**: Subscriptions to the platform newsletter.
+## Non-Functional Requirements
+- The Domain layer must not reference infrastructure, presentation frameworks, databases, or third-party packages.
+- Commands and queries must remain separated in the Application layer using MediatR.
+- Domain rules must be unit-testable without databases or external services.
+- Inventory and payment workflows must be transactional and idempotent where required.
+- Nullable reference types, secure token handling, authorization policies, and observability are required.
+- The solution must support local development and deployment to Azure SQL Database, Azure Blob Storage, and Azure-hosted application services.
 
-## Core Workflows and Roles
-
-### Role-Based Access Control (RBAC)
-The system uses granular roles rather than a simple Admin/Customer binary:
-- **SuperAdmin & Admin**: Full administrative control across all domains.
-- **CatalogManager**: Specializes in managing categories, brands, products, discounts, and product images.
-- **InventoryManager**: Manages stock levels, reorder alerts, and inventory transactions.
-- **ProcurementManager**: Handles suppliers, purchase orders, and goods receipts.
-- **SalesManager**: Oversees sales orders, payments, and promo codes.
-- **SupportAgent**: Assists with customer orders, reviews, and general support.
-- **Customer**: Standard user who browses, adds to cart, and purchases items.
-
-### User Journeys
-1. **Customer Journey**: User registers, confirms email, browses the catalog, adds products to the cart, applies a promo code, places an order, and pays via a gateway.
-2. **Management Journey**: The various managers (Catalog, Inventory, Procurement, Sales) collaborate to maintain the product lifecycle, keep stock updated via suppliers, and fulfill customer orders based on their specific access roles.
+## Success Criteria
+- Valid purchases complete without inventory overselling.
+- Completed orders retain accurate product and price snapshots.
+- Failed or cancelled checkouts release reserved stock.
+- Payment retries do not create duplicate payments or orders.
+- Staff can perform only operations allowed by their roles.
+- Domain tests run independently of infrastructure.

@@ -33,5 +33,5 @@ A clear description of what you expected to happen instead.
 
 ### Environment / Context
 - **OS / Runtime:** [e.g., Windows 11, Linux, .NET 8]
-- **Database / Tools:** [e.g., SQL Server, Postman, Swagger]
+- **Database / Tools:** [e.g., SQL Server, Postman, Scalar]
 - **Additional Details:**

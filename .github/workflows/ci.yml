@@ -2,12 +2,16 @@ name: .NET CI Pipeline
 
 on:
   push:
-    branches:
-      - "**"
+    branches: [ "master" ]
   pull_request:
-    branches:
-      - "**"
+    branches: [ "master" ]
+  schedule:
+    # Runs daily at 02:23 UTC
+    - cron: '23 2 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
