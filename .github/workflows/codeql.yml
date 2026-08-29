@@ -1,16 +1,16 @@
-name: CodeQL
+name: CodeQL Security Scan
 
 on:
-    push:
-        branches: ["master"]
-    pull_request:
-        branches: ["master"]
-    workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
-    analyze:
-        name: Analyze
-        runs-on: ubuntu-latest
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
 
         permissions:
             actions: read
@@ -20,14 +20,13 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-
-            - name: Initialize CodeQL
-              uses: github/codeql-action/init@v4
-              with:
-                  languages: csharp
-                  build-mode: none
-                  dependency-caching: true
-                  queries: security-extended
+              
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+          dependency-caching: true
 
             - name: Analyze
               uses: github/codeql-action/analyze@v4
