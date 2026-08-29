@@ -1,20 +1,30 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: ''
-labels: ''
+name: Feature Request
+about: Suggest a new feature, improvement, or architectural enhancement
+title: '[FEAT] '
+labels: 'enhancement'
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+### Context / Problem
+<!-- What pain point does this solve? e.g., "Users cannot search products by category ID, causing slow filtering." -->
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+### Proposed Solution
+<!-- Clear summary of what you want implemented -->
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+
+### Implementation Details (Optional)
+<!-- e.g., Proposed API endpoint, CQRS Command/Query, Entity/Database changes -->
+- **Component / Layer:** 
+- **Key Changes:** 
+
+### Alternatives Considered
+<!-- Any alternative approaches or tradeoffs you evaluated -->
+
+
+### Impact
+- [ ] Breaks existing API contracts
+- [ ] Requires database migration / schema update
+- [ ] Requires updating or adding unit / integration tests

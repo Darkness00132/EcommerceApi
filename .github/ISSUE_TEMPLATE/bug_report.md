@@ -1,38 +1,37 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+name: Bug Report
+about: Report a defect or unexpected behavior to help us fix it
+title: '[BUG] '
+labels: 'bug'
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+### Description
+A clear and concise description of what the bug is and what went wrong.
 
-**To Reproduce**
-Steps to reproduce the behavior:
+### Related Component / Service
+<!-- e.g., API / Controller, Database, Auth Service, Domain Logic -->
+
+
+### Steps to Reproduce
 1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+2. Send request / click '....'
+3. Observe error response or behavior
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+### Expected Behavior
+A clear description of what you expected to happen instead.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+### Actual Behavior / Error Output
+<!-- Paste error logs, HTTP status codes, or stack traces here -->
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+### API / Endpoint Details (if applicable)
+- **Method & Path:** `POST /api/...`
+- **Request Payload / Params:**
+- **Response Code:** 
 
-**Additional context**
-Add any other context about the problem here.
+### Environment / Context
+- **OS / Runtime:** [e.g., Windows 11, Linux, .NET 8]
+- **Database / Tools:** [e.g., SQL Server, Postman, Swagger]
+- **Additional Details:**
