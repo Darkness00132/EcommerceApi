@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Application.Test" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>
 

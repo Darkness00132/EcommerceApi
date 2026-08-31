@@ -1,6 +1,6 @@
 namespace Application.Constants;
 
-public static class BackgroundJobQueues
+public static class BackgroundJobQueuesPriority
 {
     public const string Critical = "critical";
     public const string Default = "default";

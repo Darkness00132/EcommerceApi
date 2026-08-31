@@ -25,16 +25,16 @@ public sealed class RefreshToken : Entity
 
     private RefreshToken() { } // Required for EF Core
 
-    public RefreshToken(
+    internal RefreshToken(
         Guid id,
-        Guid userId,
+        AppUser user,
         string token,
         DateTime expiresAt)
     {
         if (id == Guid.Empty)
             throw new DomainException("Refresh token ID cannot be empty.");
 
-        if (userId == Guid.Empty)
+        if (user.Id == Guid.Empty)
             throw new DomainException("User ID cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(token))
@@ -44,13 +44,14 @@ public sealed class RefreshToken : Entity
             throw new DomainException("Refresh token expiration must be in the future.");
 
         Id = id;
-        UserId = userId;
+        User = user;
+        UserId = user.Id;
         Token = token.Trim();
         ExpiresAt = expiresAt;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public void Revoke()
+    internal void Revoke()
     {
         if (RevokedAt is not null)
             return;

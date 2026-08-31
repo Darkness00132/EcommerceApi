@@ -229,7 +229,7 @@ public class ProductTests
     public void SetInventory_WithValidInventory_ShouldAssignInventoryToProduct()
     {
         var product = CreateProduct();
-        var inventory = new Inventory(product.Id, 50,12);
+        var inventory = new Inventory(product.Id, 50, 12);
 
         product.SetInventory(inventory);
 

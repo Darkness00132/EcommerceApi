@@ -1,6 +1,6 @@
-namespace Application.Settings;
+namespace Infrastructure.Settings;
 
-public sealed class EmailSettings
+internal class EmailSettings
 {
     public const string SectionName = "Email";
     public string Host { get; init; } = null!;

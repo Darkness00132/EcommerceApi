@@ -6,21 +6,31 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Application.Features.Account.Commands.Login;
 
-internal class LoginAccountCommandHandler(UserManager<AppUser> userManager, AccountTokenService tokenService) : IRequestHandler<LoginAccountCommand, AccountTokenDto>
+internal class LoginAccountCommandHandler
+    : IRequestHandler<LoginAccountCommand, AccountTokenDto>
 {
+    private readonly UserManager<AppUser> _userManager;
+    private readonly AccountTokenService _tokenService;
+
+    public LoginAccountCommandHandler(UserManager<AppUser> userManager, AccountTokenService tokenService)
+    {
+        _userManager = userManager;
+        _tokenService = tokenService;
+    }
+
     public async Task<AccountTokenDto> Handle(LoginAccountCommand request, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
+        var user = await _userManager.FindByEmailAsync(request.Email);
 
         if (user is null)
             throw new UnauthorizedAccessException("Invalid email or password.");
 
-        var isCorrectPassword = await userManager.CheckPasswordAsync(user, request.Password);
+        var isCorrectPassword = await _userManager.CheckPasswordAsync(user, request.Password);
 
         if (!isCorrectPassword)
             throw new UnauthorizedAccessException("Invalid email or password.");
 
-        return await tokenService.CreateAsync(user, cancellationToken);
+        return await _tokenService.CreateAsync(user, cancellationToken);
     }
 }
 

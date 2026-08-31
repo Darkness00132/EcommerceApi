@@ -1,11 +1,12 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Common;
 using Domain.Exceptions;
 using Domain.ValueObjects;
 using Microsoft.AspNetCore.Identity;
 
 namespace Domain.Entities.Identity;
 
-public sealed class AppUser : IdentityUser<Guid>
+public sealed class AppUser : IdentityUser<Guid>, IEntity
 {
     private readonly List<RefreshToken> _refreshTokens = new();
 
@@ -42,7 +43,7 @@ public sealed class AppUser : IdentityUser<Guid>
         FullName = fullName ?? throw new DomainException("Full name is required.");
     }
 
-    public void AddRefreshToken(string token, DateTime expiresAt)
+    public RefreshToken AddRefreshToken(string token, DateTime expiresAt)
     {
         if (string.IsNullOrWhiteSpace(token))
             throw new DomainException("Refresh token is required.");
@@ -50,11 +51,9 @@ public sealed class AppUser : IdentityUser<Guid>
         if (expiresAt <= DateTime.UtcNow)
             throw new DomainException("Refresh token expiration must be in the future.");
 
-        _refreshTokens.Add(new RefreshToken(
-            id: Guid.NewGuid(),
-            userId: Id,
-            token: token.Trim(),
-            expiresAt: expiresAt));
+        var refreshToken = new RefreshToken(Guid.NewGuid(), this, token.Trim(), expiresAt);
+        _refreshTokens.Add(refreshToken);
+        return refreshToken;
     }
 
     public void RevokeRefreshToken(string token)

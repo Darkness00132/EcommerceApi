@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Application.Features.Account.Commands.ConfirmEmail;
 
-internal class ConfirmEmailCommandHandler(UserManager<AppUser> userManager) : IRequestHandler<ConfirmEmailCommand>
+internal class ConfirmEmailCommandHandler(UserManager<AppUser> userManager) 
+    : IRequestHandler<ConfirmEmailCommand>
 {
     public async Task Handle(ConfirmEmailCommand request, CancellationToken cancellationToken)
     {

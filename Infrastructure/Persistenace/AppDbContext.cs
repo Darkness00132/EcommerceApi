@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;
 
-public sealed class ApplicationDbContext
+public class ApplicationDbContext
     : IdentityDbContext<AppUser, AppRole, Guid>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)

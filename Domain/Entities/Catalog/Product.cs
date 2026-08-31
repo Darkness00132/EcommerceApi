@@ -25,7 +25,7 @@ public sealed class Product : AggregateRoot
     [MaxLength(2000)]
     public string DescriptionAr { get; private set; } = null!;
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal Price { get; private set; }
 
     public bool IsActive { get; private set; }

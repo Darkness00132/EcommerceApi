@@ -1,16 +1,23 @@
 using System.Linq.Expressions;
 using Application.Abstractions.Services;
+using Application.Constants;
 using Hangfire;
 
 namespace Infrastructure.Services;
 
-internal class HangfireBackgroundJobService(
-    IBackgroundJobClient backgroundJobClient)
-    : IBackgroundJobService
+public class HangfireBackgroundJobService : IBackgroundJobService
 {
-    public void Enqueue<TService>(
-        Expression<Func<TService, Task>> methodCall)
+    private readonly IBackgroundJobClient _jobClient;
+
+    public HangfireBackgroundJobService(IBackgroundJobClient jobClient)
     {
-        backgroundJobClient.Enqueue(methodCall);
+        _jobClient = jobClient;
+    }
+
+    public void Enqueue<TService>(
+        Expression<Func<TService, Task>> methodCall,
+        string priority = BackgroundJobQueuesPriority.Default)
+    {
+        _jobClient.Enqueue<TService>(priority, methodCall);
     }
 }

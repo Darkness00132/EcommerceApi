@@ -11,7 +11,7 @@
 	</ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="CloudinaryDotNet" Version="1.29.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.25" />
     <PackageReference Include="MailKit" Version="4.17.0" />
@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.Test" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     <ProjectReference Include="..\Application\Application.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>

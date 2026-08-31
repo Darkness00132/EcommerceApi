@@ -19,7 +19,7 @@ public sealed class PurchaseOrderItem : Entity
 
     public int ReceivedQuantity { get; private set; }
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal UnitCost { get; private set; }
 
     private PurchaseOrderItem() { }
