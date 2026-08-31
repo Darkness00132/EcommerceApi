@@ -12,7 +12,6 @@ public static class DI
     {
         // Add application services here
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
-        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
 
         services.AddStackExchangeRedisCache(options => {
             options.Configuration = configuration.GetConnectionString("Redis");

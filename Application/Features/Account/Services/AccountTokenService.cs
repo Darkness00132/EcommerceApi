@@ -8,37 +8,50 @@ using Microsoft.Extensions.Options;
 
 namespace Application.Features.Account.Services;
 
-internal class AccountTokenService(IRepository<RefreshToken> refreshTokens, IUnitOfWork unitOfWork, IJwtTokenService jwtTokenService, IOptions<JwtSettings> jwtOptions)
+internal class AccountTokenService
 {
+    private readonly IRepository<RefreshToken> _refreshTokens;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IJwtTokenService _jwtTokenService;
+    private readonly IOptions<JwtSettings> _jwtOptions;
+
+    public AccountTokenService(IRepository<RefreshToken> refreshTokens, IUnitOfWork unitOfWork, IJwtTokenService jwtTokenService, IOptions<JwtSettings> jwtOptions)
+    {
+        _refreshTokens = refreshTokens;
+        _unitOfWork = unitOfWork;
+        _jwtTokenService = jwtTokenService;
+        _jwtOptions = jwtOptions;
+    }
+
     public async Task<AccountTokenDto> CreateAsync(AppUser user, CancellationToken cancellationToken)
     {
-        var (accessToken, accessExpires) = await jwtTokenService.GenerateAsync(user, cancellationToken);
+        var (accessToken, accessExpires) = await _jwtTokenService.GenerateAsync(user, cancellationToken);
 
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var refreshExpires = DateTime.UtcNow.AddDays(jwtOptions.Value.RefreshTokenExpirationInDays);
+        var refreshExpires = DateTime.UtcNow.AddDays(_jwtOptions.Value.RefreshTokenExpirationInDays);
 
         user.AddRefreshToken(refreshToken, refreshExpires);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return new AccountTokenDto(accessToken, refreshToken, accessExpires, refreshExpires);
     }
 
     public async Task<AccountTokenDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        var token = await refreshTokens.SingleOrDefaultAsync(x => x.Token == refreshToken, cancellationToken, x => x.User);
+        var token = await _refreshTokens.SingleOrDefaultAsync(x => x.Token == refreshToken, cancellationToken, x => x.User);
         if (token is null || !token.IsActive)
             throw new UnauthorizedAccessException("The refresh token is invalid or expired.");
 
-        token.Revoke();
+        token.User.RevokeRefreshToken(token.Token);
         return await CreateAsync(token.User, cancellationToken);
     }
 
     public async Task RevokeAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        var token = await refreshTokens.SingleOrDefaultAsync(x => x.Token == refreshToken, cancellationToken);
+        var token = await _refreshTokens.SingleOrDefaultAsync(x => x.Token == refreshToken, cancellationToken);
         if (token is null || !token.IsActive) return;
 
-        token.Revoke();
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        token.User.RevokeRefreshToken(token.Token);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
 

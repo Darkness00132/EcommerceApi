@@ -1,6 +1,6 @@
-using System.IO;
 using Application.Abstractions.Services;
-using Application.Settings;
+using Infrastructure.Settings;
+using Infrastructure.Abstractions;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
@@ -8,11 +8,22 @@ using MimeKit;
 
 namespace Infrastructure.Services;
 
-internal class MailKitEmailSender(
-    IOptions<EmailSettings> settings,
-    RazorLightRenderer templateRenderer)
-    : IEmailSender
+internal class MailKitEmailSender : IEmailSender
 {
+    private readonly EmailSettings _emailSettings;
+    private readonly IEmailTemplateRenderer _templateRenderer;
+    private readonly ISmtpClient _smtpClient;
+
+    public MailKitEmailSender(
+        IOptions<EmailSettings> settings,
+        IEmailTemplateRenderer templateRenderer,
+        ISmtpClient smtpClient)
+    {
+        _emailSettings = settings.Value;
+        _templateRenderer = templateRenderer;
+        _smtpClient = smtpClient;
+    }
+
     public async Task SendAsync<TModel>(
         string to,
         string subject,
@@ -20,58 +31,50 @@ internal class MailKitEmailSender(
         TModel model,
         CancellationToken cancellationToken = default)
     {
-        var emailSettings = settings.Value;
 
-        if (string.IsNullOrWhiteSpace(emailSettings.Host))
-            throw new InvalidOperationException("Email host is not configured.");
+        if (!MailboxAddress.TryParse(
+                _emailSettings.From,
+                out var fromAddress)) {
+            throw new InvalidOperationException(
+                "Email sender address is not valid.");
+        }
 
-        if (string.IsNullOrWhiteSpace(emailSettings.From))
-            throw new InvalidOperationException("Email sender address is not configured.");
-
-        var htmlBody = await templateRenderer.RenderAsync(
+        var htmlBody = await _templateRenderer.RenderAsync(
             templateFileName,
             model);
 
         var message = new MimeMessage();
 
-        if (!MailboxAddress.TryParse(emailSettings.From, out var fromAddress))
-            throw new InvalidOperationException("Email sender address is not a valid RFC 5321 address.");
         message.From.Add(fromAddress);
-
-        if (!MailboxAddress.TryParse(to, out var toAddress))
-            throw new ArgumentException($"Invalid recipient address: '{to}'", nameof(to));
-        message.To.Add(toAddress);
-
+        message.To.Add(new MailboxAddress(null, to));
         message.Subject = subject;
 
         message.Body = new BodyBuilder {
             HtmlBody = htmlBody
         }.ToMessageBody();
 
-        using var client = new SmtpClient();
-
-        var secureSocketOptions = emailSettings.UseSslOnConnect
+        var secureSocketOptions = _emailSettings.UseSslOnConnect
             ? SecureSocketOptions.SslOnConnect
             : SecureSocketOptions.StartTls;
 
-        await client.ConnectAsync(
-            emailSettings.Host,
-            emailSettings.Port,
+        await _smtpClient.ConnectAsync(
+            _emailSettings.Host,
+            _emailSettings.Port,
             secureSocketOptions,
             cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(emailSettings.UserName)) {
-            await client.AuthenticateAsync(
-                emailSettings.UserName,
-                emailSettings.Password,
+        if (!string.IsNullOrWhiteSpace(_emailSettings.UserName)) {
+            await _smtpClient.AuthenticateAsync(
+                _emailSettings.UserName,
+                _emailSettings.Password,
                 cancellationToken);
         }
 
-        await client.SendAsync(
-           message,
-           cancellationToken);
+        await _smtpClient.SendAsync(
+            message,
+            cancellationToken);
 
-        await client.DisconnectAsync(
+        await _smtpClient.DisconnectAsync(
             true,
             cancellationToken);
     }

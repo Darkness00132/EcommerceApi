@@ -7,7 +7,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Infrastructure.Services;
 
-internal sealed class SixLaborsImageService : IImageManipulationService
+internal class SixLaborsImageService : IImageManipulationService
 {
     public async Task<FileDto> ResizeImageAsync(
         FileDto file,

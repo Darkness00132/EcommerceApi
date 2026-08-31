@@ -1,7 +1,7 @@
 using Application.Features.Account.Commands.ConfirmEmail;
 using Application.Features.Account.Commands.ForgotPassword;
 using Application.Features.Account.Commands.Login;
-using Application.Features.Account.Commands.RefreshToken;
+using Application.Features.Account.Commands.Refresh;
 using Application.Features.Account.Commands.Register;
 using Application.Features.Account.Commands.ResetPassword;
 using Application.Features.Account.Commands.RevokeToken;

@@ -21,13 +21,13 @@ public sealed class PurchaseOrder : AggregateRoot
 
     public DateOnly? ExpectedDeliveryDate { get; private set; }
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal Subtotal { get; private set; }
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal TaxAmount { get; private set; }
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal ShippingCost { get; private set; }
 
     [Precision(18, 2)]

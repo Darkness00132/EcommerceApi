@@ -16,7 +16,7 @@ public sealed class Discount : Entity
 
     public DiscountType DiscountType { get; private set; }
 
-    [Precision(18,4)]
+    [Precision(18, 4)]
     public decimal Value { get; private set; }
 
     public DateRange ValidityPeriod { get; private set; } = null!;

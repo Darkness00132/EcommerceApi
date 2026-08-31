@@ -1,19 +1,24 @@
+using Infrastructure.Abstractions;
 using RazorLight;
 
 namespace Infrastructure.Services;
 
-internal sealed class RazorLightRenderer
+internal class RazorLightRenderer : IEmailTemplateRenderer
 {
-    private const string ResourceRoot = "Infrastructure.EmailTemplates";
+    private const string ResourceRoot =
+        "Infrastructure.EmailTemplates";
 
     private readonly RazorLightEngine _engine;
 
     public RazorLightRenderer()
     {
+        var assembly = typeof(RazorLightRenderer).Assembly;
+
         _engine = new RazorLightEngineBuilder()
-            .UseEmbeddedResourcesProject(typeof(RazorLightRenderer))
-            .SetOperatingAssembly(typeof(RazorLightRenderer).Assembly)
+            .UseEmbeddedResourcesProject(assembly, ResourceRoot)
+            .SetOperatingAssembly(assembly)
             .UseMemoryCachingProvider()
+            .EnableDebugMode()
             .Build();
     }
 
@@ -24,13 +29,11 @@ internal sealed class RazorLightRenderer
         ArgumentException.ThrowIfNullOrWhiteSpace(templateName);
         ArgumentNullException.ThrowIfNull(model);
 
-        var name = templateName.EndsWith(
+        var key = templateName.EndsWith(
             ".cshtml",
             StringComparison.OrdinalIgnoreCase)
                 ? templateName[..^".cshtml".Length]
                 : templateName;
-
-        var key = $"{ResourceRoot}.{name}.cshtml";
 
         return _engine.CompileRenderAsync(key, model);
     }

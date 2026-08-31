@@ -18,7 +18,7 @@ public sealed class CartItem : IEntity
 
     public int Quantity { get; private set; }
 
-    [Precision(18,2)]
+    [Precision(18, 2)]
     public decimal UnitPrice { get; private set; }
 
     [Precision(18, 2)]
