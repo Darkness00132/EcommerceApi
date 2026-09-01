@@ -84,3 +84,4 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+/Ecommerce.Api/Properties/PublishProfiles

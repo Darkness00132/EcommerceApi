@@ -53,6 +53,7 @@ public sealed class AppUser : IdentityUser<Guid>, IEntity
 
         var refreshToken = new RefreshToken(Guid.NewGuid(), this, token.Trim(), expiresAt);
         _refreshTokens.Add(refreshToken);
+
         return refreshToken;
     }
 

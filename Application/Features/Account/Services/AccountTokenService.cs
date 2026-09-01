@@ -30,8 +30,10 @@ internal class AccountTokenService
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var refreshExpires = DateTime.UtcNow.AddDays(_jwtOptions.Value.RefreshTokenExpirationInDays);
 
-        user.AddRefreshToken(refreshToken, refreshExpires);
+        var refreshTokenEntity = user.AddRefreshToken(refreshToken, refreshExpires);
+        await _refreshTokens.AddAsync(refreshTokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
         return new AccountTokenDto(accessToken, refreshToken, accessExpires, refreshExpires);
     }
 
@@ -47,7 +49,10 @@ internal class AccountTokenService
 
     public async Task RevokeAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        var token = await _refreshTokens.SingleOrDefaultAsync(x => x.Token == refreshToken, cancellationToken);
+        var token = await _refreshTokens.SingleOrDefaultAsync(
+            x => x.Token == refreshToken,
+            cancellationToken,
+            x => x.User);
         if (token is null || !token.IsActive) return;
 
         token.User.RevokeRefreshToken(token.Token);
