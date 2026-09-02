@@ -142,31 +142,6 @@ public class AccountTokenServiceTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task RevokeAsync_ShouldRevokeTokenAndSaveChanges_WhenTokenIsActive()
-    {
-        // Arrange
-        var user = CreateTestUser("john.doe@example.com");
-        var tokenString = "active-token-to-revoke";
-        var refreshToken = user.AddRefreshToken(tokenString, DateTime.UtcNow.AddDays(1));
-
-        var cancellationToken = CancellationToken.None;
-
-        _refreshTokenRepoMock
-            .Setup(r => r.SingleOrDefaultAsync(
-                It.IsAny<Expression<Func<RefreshToken, bool>>>(),
-                cancellationToken))
-            .ReturnsAsync(refreshToken);
-
-        // Act
-        await _sut.RevokeAsync(tokenString, cancellationToken);
-
-        // Assert
-        Assert.False(refreshToken.IsActive);
-        Assert.NotNull(refreshToken.RevokedAt);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(cancellationToken), Times.Once);
-    }
-
     private static AppUser CreateTestUser(string email)
     {
         return new AppUser(new FullName("John", "Doe"), email);

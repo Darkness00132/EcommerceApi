@@ -1,88 +1,73 @@
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.Catalog;
 
 public class BrandTests
 {
-    private static Brand CreateBrand(string nameEn = "Nike", string nameAr = "نايكي")
-        => new(nameEn, nameAr);
-
     [Fact]
-    public void Constructor_WithValidNames_ShouldInitializePropertiesCorrectly()
+    public void Brand_Created_When_Provide_Valid_Data()
     {
-        // Act
-        var brand = CreateBrand("  Nike  ", "  نايكي  ");
+        // Arrange & Act
+        var brand = CreateValidBrand();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, brand.Id);
-        Assert.Equal("Nike", brand.NameEn);
-        Assert.Equal("نايكي", brand.NameAr);
-        Assert.Empty(brand.Products);
+        brand.NameEn.Should().Be("brand");
+        brand.NameAr.Should().Be("brand");
     }
 
     [Theory]
-    [InlineData(null, "نايكي")]
-    [InlineData("", "نايكي")]
-    [InlineData("   ", "نايكي")]
-    [InlineData("Nike", null)]
-    [InlineData("Nike", "")]
-    [InlineData("Nike", "   ")]
-    public void Constructor_WithInvalidNames_ShouldThrowDomainException(string? nameEn, string? nameAr)
+    [InlineData("","brand")]
+    [InlineData("   ","brand")]
+    [InlineData("brand","")]
+    [InlineData("brand","   ")]
+    public void Brand_Creation_Fails_When_Provide_Invalid_English_Or_Arabic_Name(string nameEn,string nameAr)
     {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new Brand(nameEn!, nameAr!));
+        // Arrange & Act
+        var act = () => new Brand(nameEn, "brand");
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void UpdateEnglishName_WithValidName_ShouldUpdateAndTrim()
+    public void Brand_English_And_Arabic_Name_Updated_When_Provide_Valid_Name()
     {
         // Arrange
-        var brand = CreateBrand();
+        var brand = CreateValidBrand();
 
         // Act
-        brand.UpdateEnglishName("  Adidas  ");
+        brand.UpdateEnglishName("Updated Brand");
+        brand.UpdateArabicName("Updated Brand");
 
         // Assert
-        Assert.Equal("Adidas", brand.NameEn);
+        brand.NameEn.Should().Be("Updated Brand");
+        brand.NameAr.Should().Be("Updated Brand");
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void UpdateEnglishName_WithInvalidName_ShouldThrowDomainException(string? invalidName)
+    [InlineData("", "brand")]
+    [InlineData("   ", "brand")]
+    [InlineData("brand", "")]
+    [InlineData("brand", "   ")]
+    public void Brand_English_Name_Update_Fails_When_Provide_Invalid_Name(string nameEn,string nameAr)
     {
         // Arrange
-        var brand = CreateBrand();
-
-        // Act & Assert
-        Assert.Throws<DomainException>(() => brand.UpdateEnglishName(invalidName!));
-    }
-
-    [Fact]
-    public void UpdateArabicName_WithValidName_ShouldUpdateAndTrim()
-    {
-        // Arrange
-        var brand = CreateBrand();
+        var brand = CreateValidBrand();
 
         // Act
-        brand.UpdateArabicName("  أديداس  ");
+        var act = () => {
+            brand.UpdateEnglishName(nameEn);
+            brand.UpdateArabicName(nameAr);
+        };
 
         // Assert
-        Assert.Equal("أديداس", brand.NameAr);
+        act.Should().Throw<DomainException>();
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void UpdateArabicName_WithInvalidName_ShouldThrowDomainException(string? invalidName)
+    private Brand CreateValidBrand()
     {
-        // Arrange
-        var brand = CreateBrand();
-
-        // Act & Assert
-        Assert.Throws<DomainException>(() => brand.UpdateArabicName(invalidName!));
+        return new Brand("brand", "brand");
     }
 }

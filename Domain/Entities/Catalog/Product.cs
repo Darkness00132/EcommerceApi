@@ -126,12 +126,16 @@ public sealed class Product : AggregateRoot
         Touch();
     }
 
-    public void AssignDiscount(Guid discountId)
+    public void AssignDiscount(Discount discount)
     {
-        if (discountId == Guid.Empty)
+        if(discount is null)
+            throw new DomainException("Discount cannot be null.");
+
+        if (discount.Id == Guid.Empty)
             throw new DomainException("Discount ID cannot be empty.");
 
-        DiscountId = discountId;
+        this.Discount = discount;
+        DiscountId = discount.Id;
         Touch();
     }
 
@@ -183,7 +187,13 @@ public sealed class Product : AggregateRoot
 
     internal void SetInventory(Inventory inventory)
     {
-        Inventory = inventory ?? throw new DomainException("Inventory cannot be null.");
+        if(inventory is null)
+            throw new DomainException("Inventory cannot be null.");
+
+        if(inventory.Id == Guid.Empty)
+            throw new DomainException("Inventory cannot be null.");
+
+        Inventory = inventory;
     }
 
     private void Touch()

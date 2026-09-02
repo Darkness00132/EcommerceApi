@@ -73,6 +73,18 @@ public sealed class Discount : Entity
 
     public void Deactivate() => IsVisible = false;
 
+    internal decimal CalculateDiscountAmount(decimal originalPrice)
+    {
+        if (originalPrice <= 0)
+            throw new DomainException("Original price must be greater than zero.");
+
+        return DiscountType switch {
+            DiscountType.Percentage => originalPrice * (Value / 100),
+            DiscountType.FixedAmount => Value,
+            _ => throw new DomainException("Invalid discount type.")
+        };
+    }
+
     private static void ValidateValue(DiscountType discountType, decimal value)
     {
         if (value <= 0)

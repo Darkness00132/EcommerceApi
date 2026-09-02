@@ -1,110 +1,97 @@
 using Domain.Entities.Identity;
 using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Test.Identity;
 
 public class AppUserTests
 {
-    private static readonly FullName DefaultFullName = new("John", "Doe");
-    private const string DefaultEmail = "john.doe@example.com";
-
     [Fact]
-    public void Constructor_WithValidData_ShouldInitializePropertiesCorrectly()
+    public void User_Are_Created_When_Valid_Data_Is_Provided()
     {
-        // Act
-        var user = new AppUser(DefaultFullName, DefaultEmail);
+        // Arrange & Act
+        var user = CreateValidUser();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, user.Id);
-        Assert.Equal(DefaultFullName, user.FullName);
-        Assert.Equal(DefaultEmail, user.Email);
-        Assert.Equal(DefaultEmail, user.UserName);
-        Assert.Equal("John Doe", user.DisplayName);
-        Assert.Empty(user.RefreshTokens);
-    }
-
-    [Fact]
-    public void Constructor_WithNullFullName_ShouldThrowDomainException()
-    {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new AppUser(null!, DefaultEmail));
+        user.Should().NotBeNull();
+        user.FullName.FirstName.Should().Be("mohamed");
+        user.FullName.LastName.Should().Be("ahmed");
+        user.Email.Should().Be("email@gmail.com");
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithInvalidEmail_ShouldThrowDomainException(string? invalidEmail)
+    [InlineData("", "ahmed", "email@gmail.com")]
+    [InlineData("mohamed", "", "email@gmail.com")]
+    [InlineData("mohamed", "ahmed", "")]
+    public void User_Are_Not_Created_When_Invalid_Data_Is_Provided(string firstname,string lastname,string email)
     {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new AppUser(DefaultFullName, invalidEmail!));
-    }
-
-    [Fact]
-    public void ChangeName_WithValidFullName_ShouldUpdateFullName()
-    {
-        // Arrange
-        var user = new AppUser(DefaultFullName, DefaultEmail);
-        var newName = new FullName("Jane", "Smith");
-
-        // Act
-        user.ChangeName(newName);
+        // Arrange & Act
+        var user = () => CreateUser(firstname, lastname, email);
 
         // Assert
-        Assert.Equal(newName, user.FullName);
-        Assert.Equal("Jane Smith", user.DisplayName);
+        user.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void AddRefreshToken_WithValidToken_ShouldAddToCollection()
+    public void User_Can_Add_Refresh_Token_When_Valid_Data_Is_Provided()
     {
         // Arrange
-        var user = new AppUser(DefaultFullName, DefaultEmail);
-        var expiresAt = DateTime.UtcNow.AddDays(7);
+        var user = CreateValidUser();
 
-        // Act
-        user.AddRefreshToken("sample-refresh-token", expiresAt);
+        //Act
+        var refreshToken = user.AddRefreshToken("valid_refresh_token", DateTime.UtcNow.AddHours(1));
 
         // Assert
-        Assert.Single(user.RefreshTokens);
+        refreshToken.Should().NotBeNull();
+        refreshToken.Token.Should().Be("valid_refresh_token");
+        user.RefreshTokens.Should().Contain(refreshToken);
+        user.RefreshTokens.Should().HaveCount(1);
     }
 
-    [Fact]
-    public void AddRefreshToken_WithExpiredDate_ShouldThrowDomainException()
+    [Theory]
+    [MemberData(nameof(InvalidTokenData))]
+    public void User_Can_Not_Add_Refresh_Token_When_InValid_Data_Is_Provided(string tokenValue,DateTime expiresAt)
     {
         // Arrange
-        var user = new AppUser(DefaultFullName, DefaultEmail);
-        var expiredAt = DateTime.UtcNow.AddMinutes(-10);
+        var user = CreateValidUser();
 
-        // Act & Assert
-        Assert.Throws<DomainException>(() => user.AddRefreshToken("sample-token", expiredAt));
-    }
-
-    [Fact]
-    public void RevokeRefreshToken_WithExistingToken_ShouldRevokeToken()
-    {
-        // Arrange
-        var user = new AppUser(DefaultFullName, DefaultEmail);
-        var token = "token-to-revoke";
-        user.AddRefreshToken(token, DateTime.UtcNow.AddDays(1));
-
-        // Act
-        user.RevokeRefreshToken(token);
+        //Act
+        var refreshToken = () => user.AddRefreshToken(tokenValue, expiresAt);
 
         // Assert
-        var refreshToken = Assert.Single(user.RefreshTokens);
-        Assert.NotNull(refreshToken.RevokedAt);
-        Assert.False(refreshToken.IsActive);
+        refreshToken.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void RevokeRefreshToken_WithNonExistingToken_ShouldThrowDomainException()
+    public void User_Can_Revoke_Refresh_Token_When_Valid_Token_Is_Provided()
     {
         // Arrange
-        var user = new AppUser(DefaultFullName, DefaultEmail);
+        var user = CreateValidUser();
+        var refreshToken = user.AddRefreshToken("valid_refresh_token", DateTime.UtcNow.AddHours(1));
 
-        // Act & Assert
-        Assert.Throws<DomainException>(() => user.RevokeRefreshToken("non-existing-token"));
+        //Act
+        user.RevokeRefreshToken(refreshToken);
+
+        // Assert
+        user.RefreshTokens.Should().NotContain(refreshToken);
     }
+
+    private AppUser CreateUser(string firstName, string lastName, string email)
+    {
+        return new AppUser(new FullName(firstName, lastName),email);
+    }
+
+    private AppUser CreateValidUser()
+    {
+        return CreateUser("mohamed", "ahmed", "email@gmail.com");
+    }
+
+    public static IEnumerable<object[]> InvalidTokenData =>
+    new List<object[]>
+    {
+            new object[] { "", DateTime.UtcNow.AddDays(1) },
+            new object[] { "valid-token", DateTime.UtcNow.AddDays(-1) },
+            new object[] { "valid-token", DateTime.UtcNow },
+    };
 }

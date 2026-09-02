@@ -43,7 +43,7 @@ internal class AccountTokenService
         if (token is null || !token.IsActive)
             throw new UnauthorizedAccessException("The refresh token is invalid or expired.");
 
-        token.User.RevokeRefreshToken(token.Token);
+        token.User.RevokeRefreshToken(token);
         return await CreateAsync(token.User, cancellationToken);
     }
 
@@ -55,7 +55,7 @@ internal class AccountTokenService
             x => x.User);
         if (token is null || !token.IsActive) return;
 
-        token.User.RevokeRefreshToken(token.Token);
+        token.User.RevokeRefreshToken(token);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

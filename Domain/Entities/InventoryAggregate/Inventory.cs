@@ -23,7 +23,7 @@ public sealed class Inventory : AggregateRoot
 
     public IReadOnlyCollection<InventoryTransaction> Transactions => _transactions.AsReadOnly();
 
-    internal Inventory() { }
+    private Inventory() { }
 
     public Inventory(Guid productId, int quantityOnHand, int reorderLevel)
         : base(Guid.NewGuid())
@@ -54,13 +54,14 @@ public sealed class Inventory : AggregateRoot
         QuantityOnHand += quantity;
 
         AddTransaction(
-            type: InventoryTransactionType.StockIn,
-            quantityChange: quantity,
-            quantityBefore: quantityBefore,
-            quantityAfter: QuantityOnHand,
-            orderId: null,
-            goodsReceiptId: goodsReceiptId,
-            notes: notes);
+            InventoryTransactionType.StockIn,
+            quantity,
+            quantityBefore,
+            QuantityOnHand,
+            null,
+            goodsReceiptId,
+            notes
+        );
     }
 
     public void DecreaseStock(
@@ -77,14 +78,14 @@ public sealed class Inventory : AggregateRoot
         var quantityBefore = QuantityOnHand;
         QuantityOnHand -= quantity;
 
-        AddTransaction(
-            type: InventoryTransactionType.StockOut,
-            quantityChange: -quantity,
-            quantityBefore: quantityBefore,
-            quantityAfter: QuantityOnHand,
-            orderId: orderId,
-            goodsReceiptId: null,
-            notes: notes);
+        AddTransaction(InventoryTransactionType.StockOut,
+            -quantity,
+            quantityBefore,
+            QuantityOnHand,
+            orderId,
+            null,
+            notes
+        );
     }
 
     public void AdjustStock(int newQuantity, string? notes = null)
@@ -98,13 +99,14 @@ public sealed class Inventory : AggregateRoot
         QuantityOnHand = newQuantity;
 
         AddTransaction(
-            type: InventoryTransactionType.Adjustment,
-            quantityChange: quantityChange,
-            quantityBefore: quantityBefore,
-            quantityAfter: QuantityOnHand,
-            orderId: null,
-            goodsReceiptId: null,
-            notes: notes);
+            InventoryTransactionType.Adjustment,
+            quantityChange,
+            quantityBefore,
+            QuantityOnHand,
+            null,
+            null,
+            notes
+        );
     }
 
     public void ChangeReorderLevel(int reorderLevel)
@@ -125,13 +127,14 @@ public sealed class Inventory : AggregateRoot
         string? notes)
     {
         _transactions.Add(new InventoryTransaction(
-            inventoryId: Id,
-            type: type,
-            quantityChange: quantityChange,
-            quantityBefore: quantityBefore,
-            quantityAfter: quantityAfter,
-            orderId: orderId,
-            goodsReceiptId: goodsReceiptId,
-            notes: notes));
+            Id,
+            type,
+            quantityChange,
+            quantityBefore,
+            quantityAfter,
+            orderId,
+            goodsReceiptId,
+            notes)
+        );
     }
 }
