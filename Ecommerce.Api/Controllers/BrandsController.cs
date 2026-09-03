@@ -1,8 +1,5 @@
-using Api.Contracts.Common;
-using Application.Common.Pagination;
 using Application.Features.Brands.Dtos;
 using Application.Features.Brands.Queries.GetBrandById;
-using Application.Features.Brands.Queries.GetBrands;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

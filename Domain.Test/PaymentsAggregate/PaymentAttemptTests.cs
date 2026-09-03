@@ -124,6 +124,6 @@ public class PaymentAttemptTests
 
     private PaymentAttempt CreateValidPaymentAttempt(Guid paymentId)
     {
-        return new PaymentAttempt( paymentId, PaymentMethod.CashOnDelivery, 100.00m);
+        return new PaymentAttempt(paymentId, PaymentMethod.CashOnDelivery, 100.00m);
     }
 }

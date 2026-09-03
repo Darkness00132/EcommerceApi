@@ -1,7 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Common.Pagination;
 using Application.Features.Products.Dtos;
-using Domain.Entities.Catalog;
 using MediatR;
 
 namespace Application.Features.Products.Queries.GetProducts;

@@ -128,7 +128,7 @@ public sealed class Product : AggregateRoot
 
     public void AssignDiscount(Discount discount)
     {
-        if(discount is null)
+        if (discount is null)
             throw new DomainException("Discount cannot be null.");
 
         if (discount.Id == Guid.Empty)
@@ -187,10 +187,10 @@ public sealed class Product : AggregateRoot
 
     internal void SetInventory(Inventory inventory)
     {
-        if(inventory is null)
+        if (inventory is null)
             throw new DomainException("Inventory cannot be null.");
 
-        if(inventory.Id == Guid.Empty)
+        if (inventory.Id == Guid.Empty)
             throw new DomainException("Inventory cannot be null.");
 
         Inventory = inventory;

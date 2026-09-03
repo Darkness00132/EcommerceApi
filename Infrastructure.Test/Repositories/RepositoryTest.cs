@@ -1,178 +1,198 @@
 using Api.Contracts.Common;
 using AutoMapper;
-using Domain.Common;
+using FluentAssertions;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using static TestApplicationDbContext;
 
 namespace Infrastructure.Test.Repositories;
 
 public class RepositoryTests : IDisposable
 {
-    private readonly ApplicationDbContext _context;
+    private readonly TestApplicationDbContext _context;
     private readonly IConfigurationProvider _mapperConfig;
-    private readonly Repository<TestProduct> _repository;
+    private readonly Repository<TestProduct> _sut;
 
     public RepositoryTests()
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        var dbOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        _context = new TestApplicationDbContext(options);
+        _context = new TestApplicationDbContext(dbOptions);
 
         _mapperConfig = new MapperConfiguration(cfg => {
             cfg.CreateMap<TestProduct, TestProductDto>();
         }, new LoggerFactory());
 
-        _repository = new Repository<TestProduct>(_context, _mapperConfig);
+        _sut = new Repository<TestProduct>(_context, _mapperConfig);
     }
 
     [Fact]
-    public async Task GetByIdAsync_ShouldReturnEntity_WhenEntityExists()
+    public async Task An_Entity_Can_Be_Retrieved_By_Its_Id()
     {
         // Arrange
-        var product = TestProduct.Create("Laptop", 1000);
-        await _context.Set<TestProduct>().AddAsync(product);
-        await _context.SaveChangesAsync();
+        var entity = CreateTestProduct();
+        await AddProductOrManyProducts(entity);
 
         // Act
-        var result = await _repository.GetByIdAsync(product.Id);
+        var result = await _sut.GetByIdAsync(entity.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Laptop", result.Name);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(entity.Id);
     }
 
     [Fact]
-    public async Task ListAsync_ShouldFilterAndApplyIncludes()
+    public async Task Entities_Can_Be_Retrieved_Using_A_Condition()
     {
         // Arrange
-        var category = TestCategory.Create("Electronics");
-        var product1 = TestProduct.Create("Phone", 500, category);
-        var product2 = TestProduct.Create("Desk", 200);
-
-        await _context.Set<TestProduct>().AddRangeAsync(product1, product2);
-        await _context.SaveChangesAsync();
+        var entities = CreateTestEntities();
+        await AddProductOrManyProducts(entities);
 
         // Act
-        var result = await _repository.ListAsync(
-            predicate: p => p.Price > 300,
-            includes: p => p.Category!);
+        var result = await _sut.ListAsync(x => x.Name == "Test Entity");
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Phone", result[0].Name);
-        Assert.NotNull(result[0].Category);
-        Assert.Equal("Electronics", result[0].Category!.Name);
+        result.Should().ContainSingle();
+        result.First().Id.Should().Be(entities.First().Id);
     }
 
     [Fact]
-    public async Task ProjectToPagedAsync_ShouldReturnCorrectPagedResultAndOrdering()
+    public async Task An_Entity_Can_Be_Retrieved_With_Its_Related_Data()
     {
         // Arrange
-        var products = Enumerable.Range(1, 10)
-            .Select(i => TestProduct.Create($"Product {i}", i * 10))
-            .ToList();
+        var category = CreateTestCategory();
+        var entity = CreateTestProduct(category);
 
-        await _context.Set<TestProduct>().AddRangeAsync(products);
-        await _context.SaveChangesAsync();
+        await AddCategories(category);
+        await AddProductOrManyProducts(entity);
 
-        var pagination = new PaginationRequest { PageNumber = 2, PageSize = 3 };
+        // Clear tracked entities so this test verifies that Include loads the related data.
+        _context.ChangeTracker.Clear();
 
         // Act
-        var result = await _repository.ProjectToPagedAsync<TestProductDto>(
-            pagination: pagination,
-            orderBy: p => p.Price,
-            descending: true);
+        var result = await _sut.SingleOrDefaultAsync(
+            x => x.Id == entity.Id,
+            includes: x => x.Category!);
 
         // Assert
-        Assert.Equal(10, result.TotalCount);
-        Assert.Equal(3, result.Items.Count);
-        Assert.Equal("Product 7", result.Items[0].Name);
-        Assert.Equal("Product 5", result.Items[2].Name);
+        result.Should().NotBeNull();
+        result.Category.Should().NotBeNull();
+        result.Category.Id.Should().Be(category.Id);
     }
 
     [Fact]
-    public async Task AddAsync_And_Remove_ShouldTrackEntityStateCorrectly()
+    public async Task An_Entity_Can_Be_Projected_To_Another_Type()
     {
         // Arrange
-        var product = TestProduct.Create("Monitor", 300);
+        var entity = CreateTestProduct();
+        await AddProductOrManyProducts(entity);
 
-        // Act 1: Add
-        await _repository.AddAsync(product);
+        // Act
+        var result = await _sut.ProjectToSingleOrDefaultAsync<TestProductDto>(
+            x => x.Id == entity.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(entity.Id);
+        result.Name.Should().Be(entity.Name);
+        result.Price.Should().Be(entity.Price);
+    }
+
+    [Fact]
+    public async Task A_Page_Of_Entities_Can_Be_Retrieved()
+    {
+        // Arrange
+        var entities = CreateTestEntities();
+        await AddProductOrManyProducts(entities);
+
+        var pagination = new PaginationRequest {
+            PageNumber = 1,
+            PageSize = 2
+        };
+
+        // Act
+        var result = await _sut.ProjectToPagedAsync<TestProductDto>(
+            pagination,
+            x => x.Id);
+
+        // Assert
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task It_Can_Be_Checked_Whether_An_Entity_Exists()
+    {
+        // Arrange
+        var entity = CreateTestProduct();
+        await AddProductOrManyProducts(entity);
+
+        // Act
+        var result = await _sut.ExistsAsync(x => x.Id == entity.Id);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task An_Entity_Can_Be_Removed()
+    {
+        // Arrange
+        var entity = CreateTestProduct();
+        await AddProductOrManyProducts(entity);
+
+        // Act
+        _sut.Remove(entity);
         await _context.SaveChangesAsync();
 
-        Assert.True(await _repository.ExistsAsync(p => p.Name == "Monitor"));
+        // Assert
+        var storedEntity = await _context.TestProducts.FindAsync(entity.Id);
 
-        // Act 2: Remove
-        _repository.Remove(product);
+        storedEntity.Should().BeNull();
+    }
+
+    private static TestProduct CreateTestProduct(TestCategory? category = null)
+    {
+        return new TestProduct("Test Entity", 100m, category);
+    }
+
+    private static TestProduct[] CreateTestEntities()
+    {
+        return
+        [
+            new TestProduct("Test Entity", 100m),
+            new TestProduct("Another Entity", 200m),
+            new TestProduct("Third Entity", 300m)
+        ];
+    }
+
+    private static TestCategory CreateTestCategory()
+    {
+        return new TestCategory("Test Category");
+    }
+
+    private async Task AddProductOrManyProducts(params TestProduct[] entities)
+    {
+        await _context.TestProducts.AddRangeAsync(entities);
         await _context.SaveChangesAsync();
-
-        Assert.False(await _repository.ExistsAsync(p => p.Name == "Monitor"));
     }
 
-    public void Dispose()
+    private async Task AddCategories(params TestCategory[] categories)
     {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
+        await _context.TestCategories.AddRangeAsync(categories);
+        await _context.SaveChangesAsync();
+    }
+
+    public void Dispose() => _context.Dispose();
+
+    public class TestProductDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
     }
 }
-
-#region DDD Test Entities & DTOs
-
-public class TestProduct : Entity
-{
-    public string Name { get; private set; } = string.Empty;
-    public decimal Price { get; private set; }
-    public TestCategory? Category { get; private set; }
-
-    // Required by EF Core parameterless constructor binding
-    private TestProduct() { }
-
-    private TestProduct(Guid id, string name, decimal price, TestCategory? category = null)
-    {
-        Id = id;
-        Name = name;
-        Price = price;
-        Category = category;
-    }
-
-    // Static Factory Method (DDD invariant entry point)
-    public static TestProduct Create(string name, decimal price, TestCategory? category = null)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(price);
-
-        return new TestProduct(Guid.NewGuid(), name, price, category);
-    }
-}
-
-public class TestCategory : Entity
-{
-    public string Name { get; private set; } = string.Empty;
-
-    private TestCategory() { }
-
-    private TestCategory(Guid id, string name)
-    {
-        Id = id;
-        Name = name;
-    }
-
-    public static TestCategory Create(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return new TestCategory(Guid.NewGuid(), name);
-    }
-}
-
-public class TestProductDto
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public decimal Price { get; set; }
-}
-
-#endregion

@@ -159,6 +159,6 @@ public class PaymentTests
     }
     private Payment CreateValidPayment()
     {
-        return new Payment(Guid.NewGuid() ,100.00m);
+        return new Payment(Guid.NewGuid(), 100.00m);
     }
 }

@@ -1,5 +1,4 @@
 using Domain.Enums;
-using Domain.ValueObjects;
 
 namespace Application.Features.Products.Dtos;
 

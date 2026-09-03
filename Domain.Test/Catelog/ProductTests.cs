@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using Domain.Entities.Catalog;
 using Domain.Entities.InventoryAggregate;
 using Domain.Enums;
@@ -283,10 +282,10 @@ public class ProductTests
     {
         var dateRange = new DateRange(DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
 
-        return new Discount("Test Account",DiscountType.Percentage,10,dateRange);
+        return new Discount("Test Account", DiscountType.Percentage, 10, dateRange);
     }
 
-    private Inventory CreateValidInventory() 
+    private Inventory CreateValidInventory()
     {
         return new Inventory(Guid.NewGuid(), 100, 10);
     }

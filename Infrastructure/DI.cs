@@ -69,8 +69,7 @@ public static class DI
             ];
         });
 
-        services.AddSingleton(sp =>
-        {
+        services.AddSingleton(sp => {
             var settings = sp.GetRequiredService<IOptions<AzureStorageSettings>>().Value;
             return new BlobContainerClient(new Uri(settings.ConnectionString));
         });

@@ -18,11 +18,11 @@ public class BrandTests
     }
 
     [Theory]
-    [InlineData("","brand")]
-    [InlineData("   ","brand")]
-    [InlineData("brand","")]
-    [InlineData("brand","   ")]
-    public void Brand_Creation_Fails_When_Provide_Invalid_English_Or_Arabic_Name(string nameEn,string nameAr)
+    [InlineData("", "brand")]
+    [InlineData("   ", "brand")]
+    [InlineData("brand", "")]
+    [InlineData("brand", "   ")]
+    public void Brand_Creation_Fails_When_Provide_Invalid_English_Or_Arabic_Name(string nameEn, string nameAr)
     {
         // Arrange & Act
         var act = () => new Brand(nameEn, nameAr);
@@ -51,7 +51,7 @@ public class BrandTests
     [InlineData("   ", "brand")]
     [InlineData("brand", "")]
     [InlineData("brand", "   ")]
-    public void Brand_English_Name_Update_Fails_When_Provide_Invalid_Name(string nameEn,string nameAr)
+    public void Brand_English_Name_Update_Fails_When_Provide_Invalid_Name(string nameEn, string nameAr)
     {
         // Arrange
         var brand = CreateValidBrand();

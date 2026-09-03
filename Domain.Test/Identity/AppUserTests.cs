@@ -24,7 +24,7 @@ public class AppUserTests
     [InlineData("", "ahmed", "email@gmail.com")]
     [InlineData("mohamed", "", "email@gmail.com")]
     [InlineData("mohamed", "ahmed", "")]
-    public void User_Are_Not_Created_When_Invalid_Data_Is_Provided(string firstname,string lastname,string email)
+    public void User_Are_Not_Created_When_Invalid_Data_Is_Provided(string firstname, string lastname, string email)
     {
         // Arrange & Act
         var user = () => CreateUser(firstname, lastname, email);
@@ -51,7 +51,7 @@ public class AppUserTests
 
     [Theory]
     [MemberData(nameof(InvalidTokenData))]
-    public void User_Can_Not_Add_Refresh_Token_When_InValid_Data_Is_Provided(string tokenValue,DateTime expiresAt)
+    public void User_Can_Not_Add_Refresh_Token_When_InValid_Data_Is_Provided(string tokenValue, DateTime expiresAt)
     {
         // Arrange
         var user = CreateValidUser();
@@ -79,7 +79,7 @@ public class AppUserTests
 
     private AppUser CreateUser(string firstName, string lastName, string email)
     {
-        return new AppUser(new FullName(firstName, lastName),email);
+        return new AppUser(new FullName(firstName, lastName), email);
     }
 
     private AppUser CreateValidUser()

@@ -1,6 +1,6 @@
 using Application.Abstractions.Services;
-using Infrastructure.Settings;
 using Infrastructure.Abstractions;
+using Infrastructure.Settings;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;

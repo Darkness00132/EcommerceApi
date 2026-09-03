@@ -1,5 +1,5 @@
+using Domain.Common;
 using Infrastructure.Persistence;
-using Infrastructure.Test.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 public class TestApplicationDbContext : ApplicationDbContext
@@ -24,5 +24,36 @@ public class TestApplicationDbContext : ApplicationDbContext
         modelBuilder.Entity<TestCategory>(builder => {
             builder.HasKey(c => c.Id);
         });
+    }
+    public class TestProduct : Entity
+    {
+        public string Name { get; private set; } = string.Empty;
+        public decimal Price { get; private set; }
+        public TestCategory? Category { get; private set; }
+
+        private TestProduct() { }
+
+        public TestProduct(string name, decimal price, TestCategory? category = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(price);
+
+            Name = name;
+            Price = price;
+            Category = category;
+        }
+    }
+
+    public class TestCategory : Entity
+    {
+        public string Name { get; private set; } = string.Empty;
+
+        private TestCategory() { }
+
+        public TestCategory(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            Name = name;
+        }
     }
 }
