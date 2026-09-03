@@ -40,7 +40,7 @@ internal class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordComman
             cancellationToken);
 
         foreach (var refreshToken in activeRefreshTokens) {
-            user.RevokeRefreshToken(refreshToken.Token);
+            user.RevokeRefreshToken(refreshToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

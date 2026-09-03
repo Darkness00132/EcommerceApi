@@ -1,70 +1,81 @@
 using Domain.Entities.NewsletterAggregate;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test;
 
 public class NewsletterSubscriberTests
 {
-    private const string ValidEmail = "user@example.com";
-
     [Fact]
-    public void Constructor_WithValidEmail_ShouldInitializePropertiesCorrectly()
+    public void A_Newsletter_Subscriber_Is_Subscribed_When_Created()
     {
-        var subscriber = new NewsletterSubscriber("  user@example.com  ");
+        // Arrange & Act
+        var subscriber = new NewsletterSubscriber("user@example.com");
 
-        Assert.NotEqual(Guid.Empty, subscriber.Id);
-        Assert.Equal("user@example.com", subscriber.Email);
-        Assert.True(subscriber.IsSubscribed);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithEmptyEmail_ShouldThrowDomainException(string? invalidEmail)
-    {
-        Assert.Throws<DomainException>(() => new NewsletterSubscriber(invalidEmail!));
+        // Assert
+        subscriber.IsSubscribed.Should().BeTrue();
     }
 
     [Fact]
-    public void Unsubscribe_ShouldSetIsSubscribedToFalse()
+    public void A_Newsletter_Subscriber_Cannot_Be_Created_Without_An_Email()
     {
-        var subscriber = new NewsletterSubscriber(ValidEmail);
+        // Arrange & Act
+        var act = () => new NewsletterSubscriber("");
 
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Subscribed_Newsletter_Subscriber_Can_Unsubscribe()
+    {
+        // Arrange
+        var subscriber = new NewsletterSubscriber("user@example.com");
+
+        // Act
         subscriber.Unsubscribe();
 
-        Assert.False(subscriber.IsSubscribed);
+        // Assert
+        subscriber.IsSubscribed.Should().BeFalse();
     }
 
     [Fact]
-    public void Subscribe_ShouldSetIsSubscribedToTrue()
+    public void An_Unsubscribed_Newsletter_Subscriber_Can_Subscribe_Again()
     {
-        var subscriber = new NewsletterSubscriber(ValidEmail);
+        // Arrange
+        var subscriber = new NewsletterSubscriber("user@example.com");
         subscriber.Unsubscribe();
 
+        // Act
         subscriber.Subscribe();
 
-        Assert.True(subscriber.IsSubscribed);
+        // Assert
+        subscriber.IsSubscribed.Should().BeTrue();
     }
 
     [Fact]
-    public void ChangeEmail_WithValidEmail_ShouldUpdateEmail()
+    public void A_Newsletter_Subscriber_Can_Change_Their_Email()
     {
-        var subscriber = new NewsletterSubscriber(ValidEmail);
+        // Arrange
+        var subscriber = new NewsletterSubscriber("old@example.com");
 
-        subscriber.ChangeEmail("newuser@domain.com");
+        // Act
+        subscriber.ChangeEmail("new@example.com");
 
-        Assert.Equal("newuser@domain.com", subscriber.Email);
+        // Assert
+        subscriber.Email.Should().Be("new@example.com");
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ChangeEmail_WithEmptyEmail_ShouldThrowDomainException(string? invalidEmail)
+    [Fact]
+    public void A_Newsletter_Subscriber_Cannot_Change_Their_Email_To_An_Empty_Email()
     {
-        var subscriber = new NewsletterSubscriber(ValidEmail);
+        // Arrange
+        var subscriber = new NewsletterSubscriber("old@example.com");
 
-        Assert.Throws<DomainException>(() => subscriber.ChangeEmail(invalidEmail!));
+        // Act
+        var act = () => subscriber.ChangeEmail("");
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 }

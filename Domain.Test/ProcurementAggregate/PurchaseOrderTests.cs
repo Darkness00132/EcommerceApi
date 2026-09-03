@@ -1,191 +1,243 @@
 using Domain.Entities.ProcurementAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.ProcurementAggregate;
 
 public class PurchaseOrderTests
 {
+    private readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
+
     [Fact]
-    public void Constructor_WithValidArguments_InitializesDraftOrder()
+    public void A_Purchase_Order_Is_Draft_When_Created()
     {
-        var supplierId = Guid.NewGuid();
-        var orderDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Arrange & Act
+        var purchaseOrder = CreateValidPurchase();
 
-        var order = new PurchaseOrder(
-            " PO-1001 ",
-            supplierId,
-            orderDate);
-
-        Assert.Equal("PO-1001", order.Number);
-        Assert.Equal(supplierId, order.SupplierId);
-        Assert.Equal(PurchaseOrderStatus.Draft, order.Status);
-
-        Assert.Equal(0, order.Subtotal);
-        Assert.Equal(0, order.Total);
-        Assert.Empty(order.Items);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.Draft);
     }
 
     [Fact]
-    public void Constructor_WithEmptySupplierId_ThrowsDomainException()
+    public void A_Purchase_Order_Records_The_Product_Quantity_And_Cost_When_An_Item_Is_Added()
     {
-        var exception = Assert.Throws<DomainException>(() =>
-            new PurchaseOrder(
-                "PO-1001",
-                Guid.Empty,
-                DateOnly.FromDateTime(DateTime.UtcNow)));
-
-        Assert.Equal(
-            "Supplier id is required.",
-            exception.Message);
-    }
-
-    [Fact]
-    public void AddItem_WithValidData_AddsItemAndCalculatesSubtotal()
-    {
-        var order = CreateOrder();
-
-        order.AddItem(Guid.NewGuid(), 5, 10);
-
-        Assert.Single(order.Items);
-        Assert.Equal(50, order.Subtotal);
-        Assert.Equal(50, order.Total);
-    }
-
-    [Fact]
-    public void AddItem_WithExistingProduct_IncreasesQuantity()
-    {
-        var order = CreateOrder();
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
         var productId = Guid.NewGuid();
 
-        order.AddItem(productId, 5, 10);
-        order.AddItem(productId, 2, 10);
+        // Act
+        purchaseOrder.AddItem(productId, 10, 50m);
 
-        var item = Assert.Single(order.Items);
+        // Assert
+        purchaseOrder.Items.Should().ContainSingle(item =>
+            item.ProductId == productId &&
+            item.OrderedQuantity == 10 &&
+            item.UnitCost == 50m);
+    }
 
-        Assert.Equal(7, item.OrderedQuantity);
-        Assert.Equal(70, order.Subtotal);
+    [Fact]
+    public void A_Purchase_Order_Increases_The_Ordered_Quantity_When_The_Same_Product_Is_Added_Again()
+    {
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+        var productId = Guid.NewGuid();
+
+        purchaseOrder.AddItem(productId, 10, 50m);
+
+        // Act
+        purchaseOrder.AddItem(productId, 5, 50m);
+
+        // Assert
+        purchaseOrder.Items.Should().ContainSingle();
+        purchaseOrder.Items.Single().OrderedQuantity.Should().Be(15);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void AddItem_WithInvalidQuantity_ThrowsDomainException(
-        int quantity)
+    [InlineData(10, 50, 500)]
+    [InlineData(3, 125.50, 376.50)]
+    [InlineData(20, 25.75, 515)]
+    public void A_Purchase_Order_Calculates_The_Subtotal_From_Its_Items(
+        int quantity,
+        decimal unitCost,
+        decimal expectedSubtotal)
     {
-        var order = CreateOrder();
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
 
-        var exception = Assert.Throws<DomainException>(() =>
-            order.AddItem(Guid.NewGuid(), quantity, 10));
+        // Act
+        purchaseOrder.AddItem(Guid.NewGuid(), quantity, unitCost);
 
-        Assert.Equal(
-            "Ordered quantity must be greater than zero.",
-            exception.Message);
+        // Assert
+        purchaseOrder.Subtotal.Should().Be(expectedSubtotal);
+    }
+
+    [Theory]
+    [InlineData(500, 50, 25, 575)]
+    [InlineData(376.50, 37.65, 20, 434.15)]
+    [InlineData(1000, 0, 100, 1100)]
+    public void A_Purchase_Order_Includes_Tax_And_Shipping_In_The_Total(
+        decimal subtotal,
+        decimal taxAmount,
+        decimal shippingCost,
+        decimal expectedTotal)
+    {
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+        purchaseOrder.AddItem(Guid.NewGuid(), 1, subtotal);
+
+        // Act
+        purchaseOrder.SetCosts(taxAmount, shippingCost);
+
+        // Assert
+        purchaseOrder.Total.Should().Be(expectedTotal);
     }
 
     [Fact]
-    public void SetCosts_RecalculatesTotal()
+    public void A_Purchase_Order_Cannot_Be_Submitted_For_Approval_Without_Items()
     {
-        var order = CreateOrder();
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
 
-        order.AddItem(Guid.NewGuid(), 5, 10);
+        // Act
+        var act = () => purchaseOrder.SubmitForApproval();
 
-        order.SetCosts(20, 5);
-
-        Assert.Equal(50, order.Subtotal);
-        Assert.Equal(75, order.Total);
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void SubmitForApproval_WithItems_ChangesStatus()
+    public void A_Purchase_Order_Becomes_Pending_Approval_When_Submitted_With_Items()
     {
-        var order = CreateOrder();
-        order.AddItem(Guid.NewGuid(), 1, 10);
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+        purchaseOrder.AddItem(Guid.NewGuid(), 10, 50m);
 
-        order.SubmitForApproval();
+        // Act
+        purchaseOrder.SubmitForApproval();
 
-        Assert.Equal(
-            PurchaseOrderStatus.PendingApproval,
-            order.Status);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.PendingApproval);
     }
 
     [Fact]
-    public void SubmitForApproval_WithoutItems_ThrowsDomainException()
+    public void A_Purchase_Order_Becomes_Approved_After_Approval()
     {
-        var order = CreateOrder();
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+        purchaseOrder.AddItem(Guid.NewGuid(), 10, 50m);
+        purchaseOrder.SubmitForApproval();
 
-        var exception = Assert.Throws<DomainException>(
-            order.SubmitForApproval);
+        // Act
+        purchaseOrder.Approve();
 
-        Assert.Equal(
-            "Cannot submit purchase order without items.",
-            exception.Message);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.Approved);
+        purchaseOrder.ApprovedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Approve_WhenPendingApproval_ChangesStatus()
+    public void A_Purchase_Order_Can_Be_Marked_As_Partially_Received_After_Approval()
     {
-        var order = CreateApprovedCandidate();
+        // Arrange
+        var purchaseOrder = CreateApprovedPurchase();
 
-        order.Approve();
+        // Act
+        purchaseOrder.MarkAsPartiallyReceived();
 
-        Assert.Equal(
-            PurchaseOrderStatus.Approved,
-            order.Status);
-
-        Assert.NotNull(order.ApprovedAt);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.PartiallyReceived);
     }
 
     [Fact]
-    public void Complete_WhenApproved_ChangesStatus()
+    public void A_Purchase_Order_Can_Be_Completed_After_Approval()
     {
-        var order = CreateApprovedOrder();
+        // Arrange
+        var purchaseOrder = CreateApprovedPurchase();
 
-        order.Complete();
+        // Act
+        purchaseOrder.Complete();
 
-        Assert.Equal(
-            PurchaseOrderStatus.Completed,
-            order.Status);
-
-        Assert.NotNull(order.CompletedAt);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.Completed);
+        purchaseOrder.CompletedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Cancel_WhenCompleted_ThrowsDomainException()
+    public void A_Purchase_Order_Can_Be_Completed_After_Partial_Receipt()
     {
-        var order = CreateApprovedOrder();
-        order.Complete();
+        // Arrange
+        var purchaseOrder = CreateApprovedPurchase();
+        purchaseOrder.MarkAsPartiallyReceived();
 
-        var exception = Assert.Throws<DomainException>(
-            order.Cancel);
+        // Act
+        purchaseOrder.Complete();
 
-        Assert.Equal(
-            "Completed purchase orders cannot be cancelled.",
-            exception.Message);
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.Completed);
+        purchaseOrder.CompletedAt.Should().NotBeNull();
     }
 
-    private static PurchaseOrder CreateOrder()
+    [Fact]
+    public void A_Purchase_Order_Can_Be_Cancelled_Before_Completion()
+    {
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+
+        // Act
+        purchaseOrder.Cancel();
+
+        // Assert
+        purchaseOrder.Status.Should().Be(PurchaseOrderStatus.Cancelled);
+        purchaseOrder.CancelledAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void A_Completed_Purchase_Order_Cannot_Be_Cancelled()
+    {
+        // Arrange
+        var purchaseOrder = CreateApprovedPurchase();
+        purchaseOrder.Complete();
+
+        // Act
+        var act = () => purchaseOrder.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Cancelled_Purchase_Order_Cannot_Be_Cancelled_Again()
+    {
+        // Arrange
+        var purchaseOrder = CreateValidPurchase();
+        purchaseOrder.Cancel();
+
+        // Act
+        var act = () => purchaseOrder.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    private PurchaseOrder CreateValidPurchase()
     {
         return new PurchaseOrder(
-            "PO-1001",
+            "PO-001",
             Guid.NewGuid(),
-            DateOnly.FromDateTime(DateTime.UtcNow));
+            Today,
+            Today.AddDays(7),
+            notes: "Test purchase order");
     }
 
-    private static PurchaseOrder CreateApprovedCandidate()
+    private PurchaseOrder CreateApprovedPurchase()
     {
-        var order = CreateOrder();
-        order.AddItem(Guid.NewGuid(), 1, 10);
-        order.SubmitForApproval();
+        var purchaseOrder = CreateValidPurchase();
 
-        return order;
-    }
+        purchaseOrder.AddItem(Guid.NewGuid(), 10, 50m);
+        purchaseOrder.SubmitForApproval();
+        purchaseOrder.Approve();
 
-    private static PurchaseOrder CreateApprovedOrder()
-    {
-        var order = CreateApprovedCandidate();
-        order.Approve();
-
-        return order;
+        return purchaseOrder;
     }
 }

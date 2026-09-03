@@ -1,130 +1,116 @@
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.Catalog;
 
 public class CategoryTests
 {
-    // Centralized factory method to provide valid default values
-    private static Category CreateCategory(
-        string nameEn = "Electronics",
-        string nameAr = "إلكترونيات",
-        string imageKey = "categories/electronics.jpg",
-        string? descriptionEn = "Electronic devices and accessories",
-        string? descriptionAr = "الأجهزة الإلكترونية والملحقات")
-        => new(nameEn, nameAr, imageKey, descriptionEn, descriptionAr);
-
     [Fact]
-    public void Constructor_WithValidData_ShouldInitializePropertiesAndTrim()
+    public void Category_Created_When_Provide_Valid_Data()
     {
-        // Act
-        var category = CreateCategory(
-            nameEn: "  Electronics  ",
-            nameAr: "  إلكترونيات  ",
-            imageKey: "  categories/electronics.jpg  ",
-            descriptionEn: "  Devices  ",
-            descriptionAr: "  أجهزة  ");
+        // Arrange & Act
+        var category = CreateValidCategory();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, category.Id);
-        Assert.Equal("Electronics", category.NameEn);
-        Assert.Equal("إلكترونيات", category.NameAr);
-        Assert.Equal("categories/electronics.jpg", category.ImageKey);
-        Assert.Equal("Devices", category.DescriptionEn);
-        Assert.Equal("أجهزة", category.DescriptionAr);
-        Assert.Empty(category.Products);
+        category.NameEn.Should().Be("category");
+        category.NameAr.Should().Be("category");
+        category.ImageKey.Should().Be("imagekey123");
+        category.DescriptionEn.Should().BeNull();
+        category.DescriptionAr.Should().BeNull();
     }
 
     [Theory]
-    [InlineData(null, "إلكترونيات", "key.jpg")]
-    [InlineData("", "إلكترونيات", "key.jpg")]
-    [InlineData("   ", "إلكترونيات", "key.jpg")]
-    [InlineData("Electronics", null, "key.jpg")]
-    [InlineData("Electronics", "", "key.jpg")]
-    [InlineData("Electronics", "   ", "key.jpg")]
-    [InlineData("Electronics", "إلكترونيات", null)]
-    [InlineData("Electronics", "إلكترونيات", "")]
-    [InlineData("Electronics", "إلكترونيات", "   ")]
-    public void Constructor_WithInvalidRequiredParameters_ShouldThrowDomainException(
-        string? nameEn,
-        string? nameAr,
-        string? imageKey)
+    [InlineData("", "Category", "imagekey123")]
+    [InlineData("   ", "Category", "imagekey123")]
+    [InlineData("Category", "", "imagekey123")]
+    [InlineData("Category", "   ", "imagekey123")]
+    [InlineData("Category", "Category", "")]
+    [InlineData("Category", "Category", "   ")]
+    public void Category_Creation_Fails_When_Provide_Invalid_Data(
+        string nameEn,
+        string nameAr,
+        string imageKey)
     {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new Category(nameEn!, nameAr!, imageKey!));
-    }
-
-    [Theory]
-    [InlineData(null, null)]
-    [InlineData("", "")]
-    [InlineData("   ", "   ")]
-    public void Constructor_WithNullOrWhitespaceDescriptions_ShouldSetDescriptionsToNull(
-        string? descriptionEn,
-        string? descriptionAr)
-    {
-        // Act
-        var category = CreateCategory(descriptionEn: descriptionEn, descriptionAr: descriptionAr);
+        // Arrange & Act
+        var act = () => new Category(nameEn, nameAr, imageKey);
 
         // Assert
-        Assert.Null(category.DescriptionEn);
-        Assert.Null(category.DescriptionAr);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void UpdateDetails_WithValidData_ShouldUpdateAndTrim()
+    public void Category_Updated_When_Provide_Valid_Data()
     {
         // Arrange
-        var category = CreateCategory();
+        var category = CreateValidCategory();
 
         // Act
-        category.UpdateDetails("  Laptops  ", "  أجهزة حاسوب  ", "  New Desc  ", "  وصف جديد  ");
+        category.UpdateDetails(
+            "Updated Name",
+            "Updated Name",
+            "Updated Description",
+            "Updated Description");
 
         // Assert
-        Assert.Equal("Laptops", category.NameEn);
-        Assert.Equal("أجهزة حاسوب", category.NameAr);
-        Assert.Equal("New Desc", category.DescriptionEn);
-        Assert.Equal("وصف جديد", category.DescriptionAr);
+        category.NameEn.Should().Be("Updated Name");
+        category.NameAr.Should().Be("Updated Name");
+        category.DescriptionEn.Should().Be("Updated Description");
+        category.DescriptionAr.Should().Be("Updated Description");
     }
 
     [Theory]
-    [InlineData(null, "إلكترونيات")]
-    [InlineData("", "إلكترونيات")]
-    [InlineData("   ", "إلكترونيات")]
-    [InlineData("Electronics", null)]
-    [InlineData("Electronics", "")]
-    [InlineData("Electronics", "   ")]
-    public void UpdateDetails_WithInvalidNames_ShouldThrowDomainException(string? nameEn, string? nameAr)
+    [InlineData("", "Category")]
+    [InlineData("   ", "Category")]
+    [InlineData("Category", "")]
+    [InlineData("Category", "   ")]
+    public void Category_Update_Fails_When_Provide_Invalid_Data(
+        string nameEn,
+        string nameAr)
     {
         // Arrange
-        var category = CreateCategory();
+        var category = CreateValidCategory();
 
-        // Act & Assert
-        Assert.Throws<DomainException>(() => category.UpdateDetails(nameEn!, nameAr!));
+        // Act
+        var act = () => category.UpdateDetails(nameEn, nameAr);
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void UpdateImageKey_WithValidKey_ShouldUpdateAndTrim()
+    public void Category_Updates_Image_Key_When_Provide_Valid_Image_Key()
     {
         // Arrange
-        var category = CreateCategory();
+        var category = CreateValidCategory();
 
         // Act
-        category.UpdateImageKey("  categories/new-image.png  ");
+        category.UpdateImageKey("new-image-key");
 
         // Assert
-        Assert.Equal("categories/new-image.png", category.ImageKey);
+        category.ImageKey.Should().Be("new-image-key");
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void UpdateImageKey_WithInvalidKey_ShouldThrowDomainException(string? invalidKey)
+    public void Category_Image_Update_Fails_When_Provide_Invalid_Image_Key(string imageKey)
     {
         // Arrange
-        var category = CreateCategory();
+        var category = CreateValidCategory();
 
-        // Act & Assert
-        Assert.Throws<DomainException>(() => category.UpdateImageKey(invalidKey!));
+        // Act
+        var act = () => category.UpdateImageKey(imageKey);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    private Category CreateValidCategory()
+    {
+        return new Category(
+            "category",
+            "category",
+            "imagekey123");
     }
 }

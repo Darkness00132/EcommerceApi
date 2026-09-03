@@ -24,26 +24,13 @@ public sealed class Cart : IEntity
         UserId = userId;
     }
 
-    public void AddItem(
-        Guid productId,
-        int quantity,
-        decimal unitPrice,
-        decimal discountAmount = 0)
+    public void AddItem(Guid productId, int quantity)
     {
         if (productId == Guid.Empty)
             throw new DomainException("Product ID cannot be empty.");
 
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
-
-        if (unitPrice < 0)
-            throw new DomainException("Unit price cannot be negative.");
-
-        if (discountAmount < 0)
-            throw new DomainException("Discount amount cannot be negative.");
-
-        if (discountAmount > unitPrice)
-            throw new DomainException("Discount amount cannot exceed unit price.");
 
         var existingItem = _items.FirstOrDefault(x => x.ProductId == productId);
 
@@ -55,9 +42,7 @@ public sealed class Cart : IEntity
         _items.Add(new CartItem(
             cartId: UserId,
             productId: productId,
-            quantity: quantity,
-            unitPrice: unitPrice,
-            discountAmount: discountAmount));
+            quantity: quantity));
     }
 
     public void UpdateItemQuantity(Guid productId, int quantity)

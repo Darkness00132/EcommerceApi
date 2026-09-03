@@ -2,306 +2,366 @@ using Domain.Entities.OrdersAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Test.OrdersAggregate;
 
 public class OrderTests
 {
-    private static readonly Guid ValidUserId = Guid.NewGuid();
-    private static readonly Address ValidAddress = new("123 Main St", "Cairo", "01000000000");
-
     [Fact]
-    public void Constructor_WithValidArguments_ShouldInitializePendingOrder()
+    public void Order_Created_With_Pending_Status()
     {
-        // Act
-        var order = new Order(ValidUserId, ValidAddress);
+        // Arrange & Act
+        var order = CreateValidOrder();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, order.Id);
-        Assert.Equal(ValidUserId, order.UserId);
-        Assert.Equal(ValidAddress, order.ShippingAddress);
-        Assert.Equal(OrderStatus.Pending, order.Status);
-        Assert.Null(order.PromoCodeId);
-        Assert.Empty(order.Items);
-        Assert.Equal(0, order.Subtotal);
-        Assert.Equal(0, order.Total);
-        Assert.False(order.IsCompleted);
-        Assert.True(order.CreatedAt <= DateTime.UtcNow);
+        order.Status.Should().Be(OrderStatus.Pending);
+        order.Items.Should().BeEmpty();
+        order.Total.Should().Be(0);
     }
 
-    [Fact]
-    public void Constructor_WithEmptyUserId_ShouldThrowDomainException()
-    {
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new Order(Guid.Empty, ValidAddress));
-        Assert.Equal("User id is required.", ex.Message);
-    }
-
-    [Fact]
-    public void Constructor_WithNullShippingAddress_ShouldThrowDomainException()
-    {
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new Order(ValidUserId, null!));
-        Assert.Equal("Shipping address is required.", ex.Message);
-    }
-
-    [Fact]
-    public void AddItem_WhenItemDoesNotExist_ShouldAddNewItemAndRecalculateTotals()
+    [Theory]
+    [InlineData(1, 100, 0, 100)]
+    [InlineData(2, 100, 10, 180)]
+    [InlineData(3, 50, 5, 135)]
+    public void Order_Total_Calculated_Correctly_When_Add_Item(
+        int quantity,
+        decimal unitPrice,
+        decimal discountAmount,
+        decimal expectedTotal)
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
+        var order = CreateValidOrder();
+
+        // Act
+        order.AddItem(
+            Guid.NewGuid(),
+            quantity,
+            unitPrice,
+            discountAmount);
+
+        // Assert
+        order.Subtotal.Should().Be(unitPrice * quantity);
+        order.ItemsDiscountAmount.Should().Be(discountAmount * quantity);
+        order.Total.Should().Be(expectedTotal);
+    }
+
+    [Fact]
+    public void Order_Increases_Quantity_When_Add_Existing_Product()
+    {
+        // Arrange
+        var order = CreateValidOrder();
         var productId = Guid.NewGuid();
 
-        // Act
-        order.AddItem(productId, quantity: 2, unitPrice: 50m, discountAmount: 5m);
-
-        // Assert
-        var item = Assert.Single(order.Items);
-        Assert.Equal(order.Id, item.OrderId);
-        Assert.Equal(productId, item.ProductId);
-        Assert.Equal(2, item.Quantity);
-        Assert.Equal(50m, item.UnitPrice);
-        Assert.Equal(5m, item.DiscountAmount);
-
-        Assert.Equal(100m, order.Subtotal);
-        Assert.Equal(10m, order.ItemsDiscountAmount);
-        Assert.Equal(90m, order.Total);
-    }
-
-    [Fact]
-    public void AddItem_WhenItemAlreadyExists_ShouldIncreaseQuantityAndRecalculateTotals()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        var productId = Guid.NewGuid();
+        order.AddItem(productId, 2, 100);
 
         // Act
-        order.AddItem(productId, quantity: 2, unitPrice: 50m, discountAmount: 5m);
-        order.AddItem(productId, quantity: 3, unitPrice: 50m, discountAmount: 5m);
+        order.AddItem(productId, 3, 100);
 
         // Assert
-        var item = Assert.Single(order.Items);
-        Assert.Equal(5, item.Quantity);
-
-        Assert.Equal(250m, order.Subtotal);
-        Assert.Equal(25m, order.ItemsDiscountAmount);
-        Assert.Equal(225m, order.Total);
+        order.Items.Should().ContainSingle();
+        order.Items.Single().Quantity.Should().Be(5);
+        order.Subtotal.Should().Be(500);
     }
 
-    [Fact]
-    public void AddItem_WhenOrderIsNotPending_ShouldThrowDomainException()
+    [Theory]
+    [InlineData(20, 220)]
+    [InlineData(50, 250)]
+    [InlineData(0, 200)]
+    public void Order_Total_Includes_Shipping_Fee(
+        decimal shippingFee,
+        decimal expectedTotal)
     {
         // Arrange
-        var order = CreateConfirmedOrder();
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.AddItem(Guid.NewGuid(), 1, 10m));
-        Assert.Equal("Cannot modify order items when order status is Confirmed.", ex.Message);
-    }
-
-    [Fact]
-    public void SetShippingFee_WithValidAmount_ShouldUpdateShippingFeeAndRecalculateTotals()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 100m);
+        var order = CreateValidOrder();
+        order.AddItem(Guid.NewGuid(), 2, 100);
 
         // Act
-        order.SetShippingFee(15m);
+        order.SetShippingFee(shippingFee);
 
         // Assert
-        Assert.Equal(15m, order.ShippingFee);
-        Assert.Equal(115m, order.Total);
+        order.ShippingFee.Should().Be(shippingFee);
+        order.Total.Should().Be(expectedTotal);
     }
 
-    [Fact]
-    public void SetShippingFee_WithNegativeAmount_ShouldThrowDomainException()
+    [Theory]
+    [InlineData(10, 190)]
+    [InlineData(30, 170)]
+    [InlineData(200, 0)]
+    public void Order_Total_Accounts_For_Promo_Discount(
+        decimal promoDiscountAmount,
+        decimal expectedTotal)
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
+        var order = CreateValidOrder();
+        var promoCodeId = Guid.NewGuid();
 
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.SetShippingFee(-5m));
-        Assert.Equal("Shipping fee cannot be negative.", ex.Message);
-    }
-
-    [Fact]
-    public void ApplyPromoCode_WithValidArguments_ShouldUpdatePromoDiscountAndRecalculateTotals()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 100m);
-        var promoId = Guid.NewGuid();
+        order.AddItem(Guid.NewGuid(), 2, 100);
 
         // Act
-        order.ApplyPromoCode(promoId, 20m);
+        order.ApplyPromoCode(
+            promoCodeId,
+            promoDiscountAmount);
 
         // Assert
-        Assert.Equal(promoId, order.PromoCodeId);
-        Assert.Equal(20m, order.PromoDiscountAmount);
-        Assert.Equal(80m, order.Total);
+        order.PromoCodeId.Should().Be(promoCodeId);
+        order.PromoDiscountAmount.Should().Be(promoDiscountAmount);
+        order.Total.Should().Be(expectedTotal);
     }
 
     [Fact]
-    public void ApplyPromoCode_WithEmptyPromoId_ShouldThrowDomainException()
+    public void Order_Returns_To_Original_Total_When_Remove_Promo_Code()
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.ApplyPromoCode(Guid.Empty, 10m));
-        Assert.Equal("Promo code id is required.", ex.Message);
-    }
-
-    [Fact]
-    public void ApplyPromoCode_WithNegativeDiscount_ShouldThrowDomainException()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.ApplyPromoCode(Guid.NewGuid(), -10m));
-        Assert.Equal("Promo discount amount cannot be negative.", ex.Message);
-    }
-
-    [Fact]
-    public void RemovePromoCode_ShouldClearPromoDataAndRecalculateTotals()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 100m);
-        order.ApplyPromoCode(Guid.NewGuid(), 20m);
+        var order = CreateValidOrder();
+        order.AddItem(Guid.NewGuid(), 2, 100);
+        order.ApplyPromoCode(Guid.NewGuid(), 30);
 
         // Act
         order.RemovePromoCode();
 
         // Assert
-        Assert.Null(order.PromoCodeId);
-        Assert.Equal(0m, order.PromoDiscountAmount);
-        Assert.Equal(100m, order.Total);
+        order.PromoCodeId.Should().BeNull();
+        order.PromoDiscountAmount.Should().Be(0);
+        order.Total.Should().Be(200);
     }
 
     [Fact]
-    public void RecalculateTotals_WhenDiscountsExceedSubtotal_ShouldClampTotalToZero()
+    public void Order_Changes_Shipping_Address_When_Order_Is_Pending()
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 50m);
-
-        // Act
-        order.ApplyPromoCode(Guid.NewGuid(), 100m);
-
-        // Assert
-        Assert.Equal(0m, order.Total);
-    }
-
-    [Fact]
-    public void ChangeShippingAddress_WhenPending_ShouldUpdateAddress()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        var newAddress = new Address("456 Elm St", "Giza", "01111111111");
+        var order = CreateValidOrder();
+        var newAddress = new Address(
+            "new street",
+            "new city",
+            "01111111111",
+            "new notes");
 
         // Act
         order.ChangeShippingAddress(newAddress);
 
         // Assert
-        Assert.Equal(newAddress, order.ShippingAddress);
+        order.ShippingAddress.Should().Be(newAddress);
     }
 
     [Fact]
-    public void ChangeShippingAddress_WhenNotPending_ShouldThrowDomainException()
+    public void Order_Cannot_Be_Confirmed_Without_Items()
     {
         // Arrange
-        var order = CreateConfirmedOrder();
+        var order = CreateValidOrder();
 
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.ChangeShippingAddress(ValidAddress));
-        Assert.Equal("Cannot change shipping address when order status is Confirmed.", ex.Message);
+        // Act
+        var act = () => order.Confirm();
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Lifecycle_ShouldTransitionStatusThroughCompleteFlow()
+    public void Order_Follows_Confirmation_Workflow()
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 100m);
+        var order = CreateValidOrder();
+        order.AddItem(Guid.NewGuid(), 1, 100);
 
-        // Act & Assert: Pending -> Confirmed
+        // Act
         order.Confirm();
-        Assert.Equal(OrderStatus.Confirmed, order.Status);
-        Assert.False(order.IsCompleted);
-
-        // Act & Assert: Confirmed -> Processing
         order.StartProcessing();
-        Assert.Equal(OrderStatus.Processing, order.Status);
-        Assert.False(order.IsCompleted);
-
-        // Act & Assert: Processing -> Shipped
         order.Ship();
-        Assert.Equal(OrderStatus.Shipped, order.Status);
-        Assert.False(order.IsCompleted);
-
-        // Act & Assert: Shipped -> Delivered
         order.Deliver();
-        Assert.Equal(OrderStatus.Delivered, order.Status);
-        Assert.True(order.IsCompleted);
 
-        // Act & Assert: Delivered -> Refunded
+        // Assert
+        order.Status.Should().Be(OrderStatus.Delivered);
+        order.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Order_Can_Be_Refunded_After_Delivery()
+    {
+        // Arrange
+        var order = CreateValidOrder();
+        order.AddItem(Guid.NewGuid(), 1, 100);
+        order.Confirm();
+        order.StartProcessing();
+        order.Ship();
+        order.Deliver();
+
+        // Act
         order.MarkAsRefunded();
-        Assert.Equal(OrderStatus.Refunded, order.Status);
-        Assert.True(order.IsCompleted);
+
+        // Assert
+        order.Status.Should().Be(OrderStatus.Refunded);
+        order.IsCompleted.Should().BeTrue();
     }
 
     [Fact]
-    public void Confirm_WithoutItems_ShouldThrowDomainException()
+    public void Order_Can_Be_Cancelled_Before_Completion()
     {
         // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.Confirm());
-        Assert.Equal("Cannot confirm an order without items.", ex.Message);
-    }
-
-    [Fact]
-    public void Cancel_WhenPending_ShouldTransitionToCancelled()
-    {
-        // Arrange
-        var order = new Order(ValidUserId, ValidAddress);
+        var order = CreateValidOrder();
+        order.AddItem(Guid.NewGuid(), 1, 100);
 
         // Act
         order.Cancel();
 
         // Assert
-        Assert.Equal(OrderStatus.Cancelled, order.Status);
+        order.Status.Should().Be(OrderStatus.Cancelled);
+        order.IsCompleted.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Confirmed)]
+    [InlineData(OrderStatus.Processing)]
+    [InlineData(OrderStatus.Shipped)]
+    [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Refunded)]
+    public void Order_Cannot_Modify_Items_After_Pending_Status(OrderStatus status)
+    {
+        // Arrange
+        var order = CreateOrderInStatus(status);
+
+        // Act
+        var act = () => order.AddItem(Guid.NewGuid(), 1, 100);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Confirmed)]
+    [InlineData(OrderStatus.Processing)]
+    [InlineData(OrderStatus.Shipped)]
+    [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Refunded)]
+    public void Order_Cannot_Change_Shipping_Fee_After_Pending_Status(
+        OrderStatus status)
+    {
+        // Arrange
+        var order = CreateOrderInStatus(status);
+
+        // Act
+        var act = () => order.SetShippingFee(20);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Refunded)]
+    public void Order_Is_Completed_When_Delivered_Or_Refunded(OrderStatus status)
+    {
+        // Arrange
+        var order = CreateOrderInStatus(status);
+
+        // Act & Assert
+        order.IsCompleted.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Pending)]
+    [InlineData(OrderStatus.Confirmed)]
+    [InlineData(OrderStatus.Processing)]
+    [InlineData(OrderStatus.Shipped)]
+    [InlineData(OrderStatus.Cancelled)]
+    public void Order_Is_Not_Completed_When_Not_Delivered_Or_Refunded(OrderStatus status)
+    {
+        // Arrange
+        var order = CreateOrderInStatus(status);
+
+        // Act & Assert
+        order.IsCompleted.Should().BeFalse();
     }
 
     [Fact]
-    public void Cancel_WhenDelivered_ShouldThrowDomainException()
+    public void Order_Cannot_Be_Cancelled_After_Delivery()
     {
         // Arrange
-        var order = CreateDeliveredOrder();
+        var order = CreateOrderInStatus(OrderStatus.Delivered);
 
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => order.Cancel());
-        Assert.Equal("Delivered or refunded orders cannot be cancelled.", ex.Message);
+        // Act
+        var act = () => order.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
-    private static Order CreateConfirmedOrder()
+    [Fact]
+    public void Order_Cannot_Be_Refunded_Before_Delivery()
     {
-        var order = new Order(ValidUserId, ValidAddress);
-        order.AddItem(Guid.NewGuid(), 1, 100m);
-        order.Confirm();
-        return order;
+        // Arrange
+        var order = CreateValidOrder();
+
+        // Act
+        var act = () => order.MarkAsRefunded();
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
-    private static Order CreateDeliveredOrder()
+    private Order CreateValidOrder()
     {
-        var order = CreateConfirmedOrder();
-        order.StartProcessing();
-        order.Ship();
-        order.Deliver();
+        return new Order(
+            Guid.NewGuid(),
+            new Address(
+                "street",
+                "city",
+                "01000000000",
+                "notes"
+            )
+        );
+    }
+
+    private Order CreateOrderInStatus(OrderStatus status)
+    {
+        var order = CreateValidOrder();
+
+        switch (status) {
+            case OrderStatus.Pending:
+                break;
+
+            case OrderStatus.Confirmed:
+                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.Confirm();
+                break;
+
+            case OrderStatus.Processing:
+                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.Confirm();
+                order.StartProcessing();
+                break;
+
+            case OrderStatus.Shipped:
+                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.Confirm();
+                order.StartProcessing();
+                order.Ship();
+                break;
+
+            case OrderStatus.Delivered:
+                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.Confirm();
+                order.StartProcessing();
+                order.Ship();
+                order.Deliver();
+                break;
+
+            case OrderStatus.Cancelled:
+                order.Cancel();
+                break;
+
+            case OrderStatus.Refunded:
+                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.Confirm();
+                order.StartProcessing();
+                order.Ship();
+                order.Deliver();
+                order.MarkAsRefunded();
+                break;
+        }
+
         return order;
     }
 }

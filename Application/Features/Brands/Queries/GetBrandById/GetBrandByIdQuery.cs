@@ -1,4 +1,3 @@
-using Application.Constants;
 using Application.Features.Brands.Dtos;
 
 namespace Application.Features.Brands.Queries.GetBrandById;

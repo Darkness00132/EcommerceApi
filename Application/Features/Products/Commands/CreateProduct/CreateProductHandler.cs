@@ -49,8 +49,11 @@ internal class CreateProductHandler : IRequestHandler<CreateProductCommand, Guid
             product.Activate();
 
         if (request.DiscountId is not null) {
-            if (await _discountRepository.ExistsAsync(d => d.Id == request.DiscountId)) {
-                product.AssignDiscount(request.DiscountId.Value);
+            var discount = await _discountRepository
+                .SingleOrDefaultAsync(x => x.Id == request.DiscountId, cancellationToken);
+
+            if (discount != null) {
+                product.AssignDiscount(discount);
             }
         }
 

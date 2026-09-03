@@ -1,140 +1,131 @@
-using System;
 using Domain.Entities.Carts;
+using Domain.Entities.Catalog;
+using Domain.Entities.Identity;
 using Domain.Exceptions;
-using Xunit;
+using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Test.Carts;
 
 public class CartTests
 {
-    private static readonly Guid DefaultUserId = Guid.NewGuid();
-    private static readonly Guid DefaultProductId = Guid.NewGuid();
-
     [Fact]
-    public void Constructor_WithValidUserId_ShouldInitializeEmptyCart()
+    public void Cart_Add_Item_When_Provide_Valid_Data()
     {
-        var cart = new Cart(DefaultUserId);
+        // Arrange
+        var cart = CreateValidCart();
+        var product = CreateValidProduct();
 
-        Assert.Equal(DefaultUserId, cart.UserId);
-        Assert.Empty(cart.Items);
+        // Act
+        cart.AddItem(product.Id, 2);
+
+        // Assert
+        cart.Items.Should().ContainSingle(x =>
+            x.ProductId == product.Id &&
+            x.Quantity == 2
+        );
     }
 
-    [Fact]
-    public void Constructor_WithEmptyUserId_ShouldThrowDomainException()
+    [Theory]
+    [MemberData(nameof(InvalidCartItems))]
+    public void AddItem_WhenInvalidData_ThrowsDomainException(
+        Guid productId,
+        int quantity)
     {
-        Assert.Throws<DomainException>(() => new Cart(Guid.Empty));
+        // Arrange
+        var cart = CreateValidCart();
+
+        // Act
+        var act = () => cart.AddItem(productId, quantity);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        cart.Items.Should().BeEmpty();
     }
 
-    [Fact]
-    public void AddItem_NewProduct_ShouldAddItemToCollection()
-    {
-        var cart = new Cart(DefaultUserId);
-
-        cart.AddItem(DefaultProductId, quantity: 2, unitPrice: 50m, discountAmount: 5m);
-
-        var item = Assert.Single(cart.Items);
-        Assert.Equal(DefaultProductId, item.ProductId);
-        Assert.Equal(2, item.Quantity);
-        Assert.Equal(50m, item.UnitPrice);
-        Assert.Equal(5m, item.DiscountAmount);
-    }
 
     [Fact]
-    public void AddItem_ExistingProduct_ShouldIncreaseQuantity()
+    public void Cart_Update_Quantity_Of_Item()
     {
-        var cart = new Cart(DefaultUserId);
-        cart.AddItem(DefaultProductId, quantity: 2, unitPrice: 50m);
+        // Arrange
+        var cart = CreateValidCart();
+        var product = CreateValidProduct();
+        cart.AddItem(product.Id, 2);
 
-        cart.AddItem(DefaultProductId, quantity: 3, unitPrice: 50m);
+        // Act
+        cart.UpdateItemQuantity(product.Id, 5);
 
-        var item = Assert.Single(cart.Items);
-        Assert.Equal(5, item.Quantity);
-    }
-
-    [Fact]
-    public void AddItem_WithEmptyProductId_ShouldThrowDomainException()
-    {
-        var cart = new Cart(DefaultUserId);
-
-        Assert.Throws<DomainException>(() => cart.AddItem(Guid.Empty, 1, 50m));
+        // Assert
+        cart.Items.Should().ContainSingle(x =>
+            x.ProductId == product.Id &&
+            x.Quantity == 5
+        );
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void AddItem_WithInvalidQuantity_ShouldThrowDomainException(int quantity)
+    [InlineData(-5)]
+    public void Cart_Update_Quantity_Should_Fail_When_Supply_Invalid_Quantity(int quantity)
     {
-        var cart = new Cart(DefaultUserId);
+        // Arrange
+        var cart = CreateValidCart();
+        var product = CreateValidProduct();
+        cart.AddItem(product.Id, 2);
 
-        Assert.Throws<DomainException>(() => cart.AddItem(DefaultProductId, quantity, 50m));
+        // Act
+        var act = () => cart.UpdateItemQuantity(product.Id, quantity);
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void AddItem_WithNegativePrice_ShouldThrowDomainException()
+    public void Cart_Removes_Item_When_Valid_Product()
     {
-        var cart = new Cart(DefaultUserId);
+        // Arrange
+        var cart = CreateValidCart();
+        var product = CreateValidProduct();
+        cart.AddItem(product.Id, 2);
 
-        Assert.Throws<DomainException>(() => cart.AddItem(DefaultProductId, 1, -10m));
+        // Act
+        cart.RemoveItem(product.Id);
+
+        // Assert
+        cart.Items.Should().BeEmpty();
     }
 
     [Fact]
-    public void AddItem_WithDiscountExceedingUnitPrice_ShouldThrowDomainException()
+    public void Cart_Does_Not_Remove_Item_When_Provide_Nonexistent_Product()
     {
-        var cart = new Cart(DefaultUserId);
+        // Arrange
+        var cart = CreateValidCart();
+        var product = CreateValidProduct();
+        cart.AddItem(product.Id, 2);
 
-        Assert.Throws<DomainException>(() => cart.AddItem(DefaultProductId, 1, 50m, 60m));
+        // Act
+        cart.RemoveItem(Guid.NewGuid());
+
+        // Assert
+        cart.Items.Should().HaveCount(1);
     }
 
-    [Fact]
-    public void UpdateItemQuantity_ExistingItem_ShouldUpdateQuantity()
+
+    public static IEnumerable<object[]> InvalidCartItems =>
+    [
+        new object[] { Guid.Empty, 1 },
+        new object[] { Guid.NewGuid(), 0 },
+        new object[] { Guid.NewGuid(), -1 }
+    ];
+
+    private Product CreateValidProduct()
     {
-        var cart = new Cart(DefaultUserId);
-        cart.AddItem(DefaultProductId, quantity: 2, unitPrice: 50m);
-
-        cart.UpdateItemQuantity(DefaultProductId, quantity: 5);
-
-        var item = Assert.Single(cart.Items);
-        Assert.Equal(5, item.Quantity);
+        return new Product("product", "product", "product that is product", "product that is product", "SKU-123", 100, Guid.NewGuid(), Guid.NewGuid());
     }
 
-    [Fact]
-    public void UpdateItemQuantity_NonExistingItem_ShouldThrowDomainException()
+    private Cart CreateValidCart()
     {
-        var cart = new Cart(DefaultUserId);
-
-        Assert.Throws<DomainException>(() => cart.UpdateItemQuantity(DefaultProductId, 5));
-    }
-
-    [Fact]
-    public void RemoveItem_ExistingItem_ShouldRemoveFromCollection()
-    {
-        var cart = new Cart(DefaultUserId);
-        cart.AddItem(DefaultProductId, quantity: 2, unitPrice: 50m);
-
-        cart.RemoveItem(DefaultProductId);
-
-        Assert.Empty(cart.Items);
-    }
-
-    [Fact]
-    public void RemoveItem_NonExistingItem_ShouldNoOp()
-    {
-        var cart = new Cart(DefaultUserId);
-
-        cart.RemoveItem(DefaultProductId);
-
-        Assert.Empty(cart.Items);
-    }
-
-    [Fact]
-    public void Clear_ShouldRemoveAllItems()
-    {
-        var cart = new Cart(DefaultUserId);
-        cart.AddItem(Guid.NewGuid(), 1, 10m);
-        cart.AddItem(Guid.NewGuid(), 2, 20m);
-
-        cart.Clear();
-
-        Assert.Empty(cart.Items);
+        var user = new AppUser(new FullName("mohamed", "tarek"), "test@example.com");
+        return new Cart(user.Id);
     }
 }

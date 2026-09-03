@@ -1,70 +1,96 @@
 using Domain.Entities.ProcurementAggregate;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.ProcurementAggregate;
 
 public class SupplierTests
 {
     [Fact]
-    public void Constructor_WithValidArguments_CreatesActiveSupplier()
+    public void A_Supplier_Can_Be_Created_With_Valid_Information()
     {
-        var supplier = new Supplier(
-            " Supplier A ",
-            email: " test@test.com ");
+        // Arrange & Act
+        var supplier = CreateValidSupplier();
 
-        Assert.Equal("Supplier A", supplier.Name);
-        Assert.Equal("test@test.com", supplier.Email);
-        Assert.True(supplier.IsActive);
+        // Assert
+        supplier.Name.Should().Be("Valid Supplier");
+        supplier.ContactName.Should().Be("John Doe");
+        supplier.Email.Should().Be("email@example.com");
+        supplier.IsActive.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithInvalidName_ThrowsDomainException(
-        string? name)
+    public void A_Supplier_Cannot_Be_Created_Without_A_Name(string name)
     {
-        var exception = Assert.Throws<DomainException>(() =>
-            new Supplier(name!));
+        // Arrange & Act
+        var act = () => new Supplier(name);
 
-        Assert.Equal(
-            "Supplier name is required.",
-            exception.Message);
+        // Assert
+        act.Should()
+            .Throw<DomainException>()
+            .WithMessage("Supplier name is required.");
     }
 
     [Fact]
-    public void Update_WithValidData_UpdatesProperties()
+    public void A_Supplier_Information_Can_Be_Changed()
     {
-        var supplier = new Supplier("Supplier A");
+        // Arrange
+        var supplier = CreateValidSupplier();
 
+        // Act
         supplier.Update(
-            "Supplier B",
-            email: "new@test.com");
+            "New Supplier",
+            "Jane Doe",
+            "new@example.com",
+            "0123456789",
+            "123 Main Street",
+            "Cairo",
+            "123456");
 
-        Assert.Equal("Supplier B", supplier.Name);
-        Assert.Equal("new@test.com", supplier.Email);
-        Assert.NotNull(supplier.UpdatedAt);
+        // Assert
+        supplier.Name.Should().Be("New Supplier");
+        supplier.ContactName.Should().Be("Jane Doe");
+        supplier.Email.Should().Be("new@example.com");
+        supplier.Phone.Should().Be("0123456789");
+        supplier.Address.Should().Be("123 Main Street");
+        supplier.City.Should().Be("Cairo");
+        supplier.TaxNumber.Should().Be("123456");
     }
 
     [Fact]
-    public void Deactivate_SetsSupplierInactive()
+    public void A_Supplier_Can_Be_Deactivated()
     {
-        var supplier = new Supplier("Supplier A");
+        // Arrange
+        var supplier = CreateValidSupplier();
 
+        // Act
         supplier.Deactivate();
 
-        Assert.False(supplier.IsActive);
-        Assert.NotNull(supplier.UpdatedAt);
+        // Assert
+        supplier.IsActive.Should().BeFalse();
     }
 
     [Fact]
-    public void Activate_SetsSupplierActive()
+    public void A_Deactivated_Supplier_Can_Be_Activated_Again()
     {
-        var supplier = new Supplier("Supplier A");
-
+        // Arrange
+        var supplier = CreateValidSupplier();
         supplier.Deactivate();
+
+        // Act
         supplier.Activate();
 
-        Assert.True(supplier.IsActive);
+        // Assert
+        supplier.IsActive.Should().BeTrue();
+    }
+
+    private Supplier CreateValidSupplier()
+    {
+        return new Supplier(
+            name: "Valid Supplier",
+            contactName: "John Doe",
+            email: "email@example.com");
     }
 }

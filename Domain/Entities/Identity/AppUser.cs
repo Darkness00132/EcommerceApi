@@ -53,20 +53,17 @@ public sealed class AppUser : IdentityUser<Guid>, IEntity
 
         var refreshToken = new RefreshToken(Guid.NewGuid(), this, token.Trim(), expiresAt);
         _refreshTokens.Add(refreshToken);
+
         return refreshToken;
     }
 
-    public void RevokeRefreshToken(string token)
+    public void RevokeRefreshToken(RefreshToken refreshToken)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        if (refreshToken is null)
             throw new DomainException("Refresh token is required.");
 
-        var trimmedToken = token.Trim();
-        var refreshToken = _refreshTokens.FirstOrDefault(x => x.Token == trimmedToken);
-
-        if (refreshToken is null)
-            throw new DomainException("Refresh token was not found.");
-
         refreshToken.Revoke();
+
+        _refreshTokens.Remove(refreshToken);
     }
 }

@@ -28,7 +28,7 @@ public sealed class InventoryTransaction : Entity
 
     public DateTime CreatedAt { get; private set; }
 
-    internal InventoryTransaction() { }
+    private InventoryTransaction() { }
 
     internal InventoryTransaction(
         Guid inventoryId,

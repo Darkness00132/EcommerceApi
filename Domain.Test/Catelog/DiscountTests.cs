@@ -2,109 +2,207 @@ using Domain.Entities.Catalog;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Test.Catalog;
 
 public class DiscountTests
 {
-    private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
-    private static readonly DateRange DefaultPeriod = new(Today, Today.AddDays(10));
+    [Fact]
+    public void Discount_Created_When_Provide_Valid_Data()
+    {
+        // Arrange & Act
+        var discount = CreateDiscount();
 
-    private static Discount CreateDiscount(
+        // Assert
+        discount.Should().NotBeNull();
+        discount.DiscountType.Should().Be(DiscountType.Percentage);
+        discount.Name.Should().Be("Summer Sale");
+        discount.Value.Should().Be(15m);
+        discount.ValidityPeriod.Should().Be(DefaultPeriod);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidDiscountData))]
+    public void Discount_Creation_Fails_When_Provide_Invalid_Data(
+        string name,
+        DiscountType type,
+        decimal value,
+        DateRange period)
+    {
+        // Arrange & Act
+        var act = () => new Discount(name, type, value, period!);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Discount_Updates_When_Provide_Valid_Data()
+    {
+        // Arrange
+        var discount = CreateDiscount();
+        var newPeriod = new DateRange(Today.AddDays(20), Today.AddDays(30));
+
+        // Act
+        discount.UpdateDetails(
+            "Winter Sale",
+            DiscountType.FixedAmount,
+            20m,
+            newPeriod);
+
+        // Assert
+        discount.Name.Should().Be("Winter Sale");
+        discount.DiscountType.Should().Be(DiscountType.FixedAmount);
+        discount.Value.Should().Be(20m);
+        discount.ValidityPeriod.Should().Be(newPeriod);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidDiscountData))]
+    public void Discount_Update_Fails_When_Provide_Invalid_Data(
+        string name,
+        DiscountType type,
+        decimal value,
+        DateRange period)
+    {
+        // Arrange
+        var discount = CreateDiscount();
+
+        // Act
+        var act = () => discount.UpdateDetails(name, type, value, period);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Discount_Is_Active_When_Date_Is_Within_Validity_Period()
+    {
+        // Arrange
+        var discount = CreateDiscount();
+
+        // Act
+        var result = discount.IsValidOn(Today.AddDays(5));
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(11)]
+    public void Discount_Is_Not_Active_When_Date_Is_Outside_Validity_Period(int days)
+    {
+        // Arrange
+        var discount = CreateDiscount();
+
+        // Act
+        var result = discount.IsValidOn(Today.AddDays(days));
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Discount_Is_Not_Active_When_Deactivated()
+    {
+        // Arrange
+        var discount = CreateDiscount();
+        discount.Deactivate();
+
+        // Act
+        var result = discount.IsValidOn(Today.AddDays(5));
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Discount_Is_Active_When_Activated()
+    {
+        // Arrange
+        var discount = CreateDiscount();
+        discount.Deactivate();
+
+        // Act
+        discount.Activate();
+
+        // Assert
+        discount.IsValidOn(Today.AddDays(5)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Discount_Calculates_Percentage_Amount()
+    {
+        // Arrange
+        var discount = CreateDiscount(
+            type: DiscountType.Percentage,
+            value: 15m);
+
+        // Act
+        var result = discount.CalculateDiscountAmount(200m);
+
+        // Assert
+        result.Should().Be(30m);
+    }
+
+    [Fact]
+    public void Discount_Calculates_Fixed_Amount()
+    {
+        // Arrange
+        var discount = CreateDiscount(
+            type: DiscountType.FixedAmount,
+            value: 25m);
+
+        // Act
+        var result = discount.CalculateDiscountAmount(200m);
+
+        // Assert
+        result.Should().Be(25m);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Discount_Calculation_Fails_When_Original_Price_Is_Invalid(decimal originalPrice)
+    {
+        // Arrange
+        var discount = CreateDiscount();
+
+        // Act
+        var act = () => discount.CalculateDiscountAmount(originalPrice);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    private static readonly DateOnly Today =
+        DateOnly.FromDateTime(DateTime.UtcNow);
+
+    private static readonly DateRange DefaultPeriod =
+        new(Today, Today.AddDays(10));
+
+    public static IEnumerable<object[]> InvalidDiscountData =>
+    [
+        new object[] { "", DiscountType.Percentage, 15m, DefaultPeriod },
+        new object[] { "   ", DiscountType.Percentage, 15m, DefaultPeriod },
+        new object[] { "Summer Sale", DiscountType.Percentage, 0m, DefaultPeriod },
+        new object[] { "Summer Sale", DiscountType.Percentage, -10m, DefaultPeriod },
+        new object[] { "Summer Sale", DiscountType.Percentage, 101m, DefaultPeriod },
+        new object[] { "Summer Sale", DiscountType.Percentage, 15m, null! }
+    ];
+
+    private Discount CreateDiscount(
         string name = "Summer Sale",
         DiscountType type = DiscountType.Percentage,
         decimal value = 15m,
-        DateRange? period = null) => new(name, type, value, period ?? DefaultPeriod);
-
-    [Fact]
-    public void Constructor_WithValidData_ShouldInitializeCorrectly()
+        DateRange? period = null)
     {
-        // Act
-        var discount = CreateDiscount("  Summer Sale  ", DiscountType.FixedAmount, 50m);
-
-        // Assert
-        Assert.NotEqual(Guid.Empty, discount.Id);
-        Assert.Equal("Summer Sale", discount.Name);
-        Assert.Equal(DiscountType.FixedAmount, discount.DiscountType);
-        Assert.Equal(50m, discount.Value);
-        Assert.True(discount.IsVisible);
-        Assert.Equal(DefaultPeriod.StartDate, discount.StartDate);
-        Assert.Equal(DefaultPeriod.EndDate, discount.EndDate);
-        Assert.Empty(discount.Products);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithInvalidName_ShouldThrowDomainException(string? invalidName)
-    {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new Discount(invalidName!, DiscountType.Percentage, 10m, DefaultPeriod));
-    }
-
-    [Theory]
-    [InlineData(DiscountType.Percentage, 0)]
-    [InlineData(DiscountType.Percentage, -5)]
-    [InlineData(DiscountType.Percentage, 100.01)]
-    [InlineData(DiscountType.FixedAmount, 0)]
-    [InlineData(DiscountType.FixedAmount, -10)]
-    public void ValidateValue_WithInvalidValues_ShouldThrowDomainException(DiscountType type, decimal value)
-    {
-        // Act & Assert
-        Assert.Throws<DomainException>(() => new Discount("Sale", type, value, DefaultPeriod));
-    }
-
-    [Fact]
-    public void UpdateDetails_WithValidData_ShouldUpdateProperties()
-    {
-        // Arrange
-        var discount = CreateDiscount();
-        var newPeriod = new DateRange(Today.AddDays(1), Today.AddDays(5));
-
-        // Act
-        discount.UpdateDetails("  Winter Sale  ", DiscountType.FixedAmount, 100m, newPeriod);
-
-        // Assert
-        Assert.Equal("Winter Sale", discount.Name);
-        Assert.Equal(DiscountType.FixedAmount, discount.DiscountType);
-        Assert.Equal(100m, discount.Value);
-        Assert.Equal(newPeriod, discount.ValidityPeriod);
-    }
-
-    [Fact]
-    public void ActivationAndDeactivation_ShouldToggleVisibility()
-    {
-        // Arrange
-        var discount = CreateDiscount();
-
-        // Act & Assert
-        discount.Deactivate();
-        Assert.False(discount.IsVisible);
-
-        discount.Activate();
-        Assert.True(discount.IsVisible);
-    }
-
-    [Fact]
-    public void IsValidOn_WhenVisibleAndWithinRange_ShouldReturnTrue()
-    {
-        // Arrange
-        var period = new DateRange(Today.AddDays(-1), Today.AddDays(1));
-        var discount = CreateDiscount(period: period);
-
-        // Act & Assert
-        Assert.True(discount.IsValidOn(Today));
-    }
-
-    [Fact]
-    public void IsValidOn_WhenDeactivated_ShouldReturnFalse()
-    {
-        // Arrange
-        var discount = CreateDiscount(period: DefaultPeriod);
-        discount.Deactivate();
-
-        // Act & Assert
-        Assert.False(discount.IsValidOn(Today));
+        return new Discount(
+            name,
+            type,
+            value,
+            period ?? DefaultPeriod);
     }
 }

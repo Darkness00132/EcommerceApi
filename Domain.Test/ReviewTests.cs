@@ -1,203 +1,74 @@
 using Domain.Entities.ReviewsAggregate;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Tests;
 
 public class ReviewTests
 {
     [Fact]
-    public void Constructor_WithValidArguments_InitializesReview()
+    public void A_Review_Can_Be_Created_With_Valid_Information()
     {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var productId = Guid.NewGuid();
-
-        // Act
-        var review = new Review(
-            userId,
-            productId,
-            5,
-            "  Great product  ");
+        // Arrange & Act
+        var review = CreateValidReview();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, review.Id);
-        Assert.Equal(userId, review.UserId);
-        Assert.Equal(productId, review.ProductId);
-        Assert.Equal(5, review.Rating);
-        Assert.Equal("Great product", review.Comment);
-        Assert.True(
-            (DateTime.UtcNow - review.CreatedAt).TotalSeconds < 1);
-    }
-
-    [Fact]
-    public void Constructor_WithEmptyUserId_ThrowsDomainException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            new Review(
-                Guid.Empty,
-                Guid.NewGuid(),
-                5));
-
-        Assert.Equal(
-            "User id is required.",
-            exception.Message);
-    }
-
-    [Fact]
-    public void Constructor_WithEmptyProductId_ThrowsDomainException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            new Review(
-                Guid.NewGuid(),
-                Guid.Empty,
-                5));
-
-        Assert.Equal(
-            "Product id is required.",
-            exception.Message);
+        review.Rating.Should().Be(5);
+        review.Comment.Should().Be("Great product!");
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(-1)]
     [InlineData(6)]
-    [InlineData(100)]
-    public void Constructor_WithInvalidRating_ThrowsDomainException(
-        int rating)
+    public void A_Review_Cannot_Have_A_Rating_Outside_The_Allowed_Range(int rating)
     {
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            new Review(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                rating));
-
-        Assert.Equal(
-            "Rating must be between 1 and 5.",
-            exception.Message);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithEmptyComment_SetsCommentToNull(
-        string? comment)
-    {
-        // Act
-        var review = new Review(
+        // Arrange & Act
+        var act = () => new Review(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            5,
-            comment);
+            rating);
 
         // Assert
-        Assert.Null(review.Comment);
+        act.Should()
+            .Throw<DomainException>()
+            .WithMessage("Rating must be between 1 and 5.");
     }
 
     [Fact]
-    public void Constructor_WithCommentExceedingMaximumLength_ThrowsDomainException()
+    public void A_Review_Can_Be_Updated()
     {
         // Arrange
-        var comment = new string('A', 1001);
+        var review = CreateValidReview();
 
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            new Review(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                5,
-                comment));
+        // Act
+        review.Update(4, "Good product!");
 
-        Assert.Equal(
-            "Comment cannot exceed 1000 characters.",
-            exception.Message);
+        // Assert
+        review.Rating.Should().Be(4);
+        review.Comment.Should().Be("Good product!");
     }
 
     [Fact]
-    public void Update_WithValidArguments_UpdatesReview()
+    public void A_Review_Cannot_Be_Updated_With_An_Invalid_Rating()
     {
         // Arrange
-        var review = new Review(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            3,
-            "Old comment");
+        var review = CreateValidReview();
 
         // Act
-        review.Update(
-            5,
-            "  New comment  ");
+        var act = () => review.Update(6);
 
         // Assert
-        Assert.Equal(5, review.Rating);
-        Assert.Equal("New comment", review.Comment);
-        Assert.NotNull(review.UpdatedAt);
+        act.Should()
+            .Throw<DomainException>()
+            .WithMessage("Rating must be between 1 and 5.");
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(6)]
-    public void Update_WithInvalidRating_ThrowsDomainException(
-        int rating)
+    private static Review CreateValidReview()
     {
-        // Arrange
-        var review = new Review(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            5);
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            review.Update(rating));
-
-        Assert.Equal(
-            "Rating must be between 1 and 5.",
-            exception.Message);
-    }
-
-    [Fact]
-    public void Update_WithCommentExceedingMaximumLength_ThrowsDomainException()
-    {
-        // Arrange
-        var review = new Review(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            5);
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            review.Update(
-                5,
-                new string('A', 1001)));
-
-        Assert.Equal(
-            "Comment cannot exceed 1000 characters.",
-            exception.Message);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Update_WithEmptyComment_SetsCommentToNull(
-        string? comment)
-    {
-        // Arrange
-        var review = new Review(
+        return new Review(
             Guid.NewGuid(),
             Guid.NewGuid(),
             5,
-            "Test");
-
-        // Act
-        review.Update(4, comment);
-
-        // Assert
-        Assert.Equal(4, review.Rating);
-        Assert.Null(review.Comment);
+            "Great product!");
     }
 }

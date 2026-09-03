@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
-using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.Carts;
 
@@ -18,17 +17,11 @@ public sealed class CartItem : IEntity
 
     public int Quantity { get; private set; }
 
-    [Precision(18, 2)]
-    public decimal UnitPrice { get; private set; }
-
-    [Precision(18, 2)]
-    public decimal DiscountAmount { get; private set; }
+    [NotMapped]
+    public decimal LineSubtotal => Product.Price * Quantity;
 
     [NotMapped]
-    public decimal LineSubtotal => UnitPrice * Quantity;
-
-    [NotMapped]
-    public decimal LineDiscount => DiscountAmount * Quantity;
+    public decimal LineDiscount => Product.Discount?.CalculateDiscountAmount(Product.Price) ?? 0 * Quantity;
 
     [NotMapped]
     public decimal LineTotal => LineSubtotal - LineDiscount;
@@ -38,9 +31,7 @@ public sealed class CartItem : IEntity
     public CartItem(
         Guid cartId,
         Guid productId,
-        int quantity,
-        decimal unitPrice,
-        decimal discountAmount = 0)
+        int quantity)
     {
         if (cartId == Guid.Empty)
             throw new DomainException("Cart ID cannot be empty.");
@@ -51,23 +42,12 @@ public sealed class CartItem : IEntity
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
 
-        if (unitPrice < 0)
-            throw new DomainException("Unit price cannot be negative.");
-
-        if (discountAmount < 0)
-            throw new DomainException("Discount amount cannot be negative.");
-
-        if (discountAmount > unitPrice)
-            throw new DomainException("Discount amount cannot exceed unit price.");
-
         CartId = cartId;
         ProductId = productId;
         Quantity = quantity;
-        UnitPrice = unitPrice;
-        DiscountAmount = discountAmount;
     }
 
-    public void IncreaseQuantity(int quantity)
+    internal void IncreaseQuantity(int quantity)
     {
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
@@ -75,26 +55,11 @@ public sealed class CartItem : IEntity
         Quantity += quantity;
     }
 
-    public void ChangeQuantity(int quantity)
+    internal void ChangeQuantity(int quantity)
     {
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
 
         Quantity = quantity;
-    }
-
-    public void ChangePrice(decimal unitPrice, decimal discountAmount = 0)
-    {
-        if (unitPrice < 0)
-            throw new DomainException("Unit price cannot be negative.");
-
-        if (discountAmount < 0)
-            throw new DomainException("Discount amount cannot be negative.");
-
-        if (discountAmount > unitPrice)
-            throw new DomainException("Discount amount cannot exceed unit price.");
-
-        UnitPrice = unitPrice;
-        DiscountAmount = discountAmount;
     }
 }

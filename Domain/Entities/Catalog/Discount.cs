@@ -66,12 +66,24 @@ public sealed class Discount : Entity
 
     public bool IsValidOn(DateOnly date)
     {
-        return IsVisible && ValidityPeriod.Contains(date);
+        return IsVisible && ValidityPeriod.IsValidOn(date);
     }
 
     public void Activate() => IsVisible = true;
 
     public void Deactivate() => IsVisible = false;
+
+    internal decimal CalculateDiscountAmount(decimal originalPrice)
+    {
+        if (originalPrice <= 0)
+            throw new DomainException("Original price must be greater than zero.");
+
+        return DiscountType switch {
+            DiscountType.Percentage => originalPrice * (Value / 100),
+            DiscountType.FixedAmount => Value,
+            _ => throw new DomainException("Invalid discount type.")
+        };
+    }
 
     private static void ValidateValue(DiscountType discountType, decimal value)
     {

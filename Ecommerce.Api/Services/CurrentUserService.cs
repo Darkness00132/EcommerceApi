@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Application.Abstractions.Services;
 using Application.Exceptions;
-using Microsoft.AspNetCore.Http;
 
 namespace Ecommerce.Api.Services;
 

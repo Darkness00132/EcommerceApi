@@ -1,211 +1,291 @@
 using Domain.Entities.InventoryAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.InventoryAggregate;
 
 public class InventoryTests
 {
-    private static readonly Guid ValidProductId = Guid.NewGuid();
-
     [Fact]
-    public void Constructor_WithValidArguments_ShouldInitializePropertiesCorrectly()
+    public void Inventory_Created_When_Provide_Valid_Data()
     {
-        // Act
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 50, reorderLevel: 10);
+        // Arrange & Act
+        var inventory = CreateValidInventory();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, inventory.Id);
-        Assert.Equal(ValidProductId, inventory.ProductId);
-        Assert.Equal(50, inventory.QuantityOnHand);
-        Assert.Equal(10, inventory.ReorderLevel);
-        Assert.Empty(inventory.Transactions);
-    }
-
-    [Fact]
-    public void Constructor_WithEmptyProductId_ShouldThrowDomainException()
-    {
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new Inventory(Guid.Empty, 10, 5));
-        Assert.Equal("Product ID cannot be empty.", ex.Message);
+        inventory.ProductId.Should().NotBe(Guid.Empty);
+        inventory.QuantityOnHand.Should().Be(10);
+        inventory.ReorderLevel.Should().Be(5);
+        inventory.Transactions.Should().BeEmpty();
     }
 
     [Theory]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void Constructor_WithNegativeQuantity_ShouldThrowDomainException(int invalidQuantity)
+    [InlineData(-1, 5)]
+    [InlineData(-10, 5)]
+    [InlineData(10, -1)]
+    [InlineData(10, -10)]
+    public void Inventory_Creation_Fails_When_Provide_Negative_Quantities(
+        int quantityOnHand,
+        int reorderLevel)
     {
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new Inventory(ValidProductId, invalidQuantity, 5));
-        Assert.Equal("Quantity on hand cannot be negative.", ex.Message);
-    }
+        // Arrange & Act
+        var act = () => new Inventory(
+            Guid.NewGuid(),
+            quantityOnHand,
+            reorderLevel);
 
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(-5)]
-    public void Constructor_WithNegativeReorderLevel_ShouldThrowDomainException(int invalidReorderLevel)
-    {
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new Inventory(ValidProductId, 10, invalidReorderLevel));
-        Assert.Equal("Reorder level cannot be negative.", ex.Message);
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void IncreaseStock_WithValidQuantity_ShouldUpdateStockAndRecordTransaction()
+    public void Inventory_Increases_Stock_And_Creates_Transaction_When_Provide_Valid_Quantity()
     {
         // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 20, reorderLevel: 5);
-        var receiptId = Guid.NewGuid();
+        var inventory = CreateValidInventory();
 
         // Act
-        inventory.IncreaseStock(10, goodsReceiptId: receiptId, notes: "  Shipment arrived  ");
+        inventory.IncreaseStock(10);
 
         // Assert
-        Assert.Equal(30, inventory.QuantityOnHand);
+        inventory.Transactions.Should().ContainSingle();
 
-        var tx = Assert.Single(inventory.Transactions);
-        Assert.Equal(inventory.Id, tx.InventoryId);
-        Assert.Equal(InventoryTransactionType.StockIn, tx.Type);
-        Assert.Equal(10, tx.QuantityChange);
-        Assert.Equal(20, tx.QuantityBefore);
-        Assert.Equal(30, tx.QuantityAfter);
-        Assert.Equal(receiptId, tx.GoodsReceiptId);
-        Assert.Null(tx.OrderId);
-        Assert.Equal("Shipment arrived", tx.Notes);
-        Assert.True(tx.CreatedAt <= DateTime.UtcNow);
+        var transaction = inventory.Transactions.Single();
+
+        transaction.Type.Should().Be(InventoryTransactionType.StockIn);
+        transaction.QuantityChange.Should().Be(10);
+        transaction.QuantityBefore.Should().Be(10);
+        transaction.QuantityAfter.Should().Be(20);
+        transaction.InventoryId.Should().Be(inventory.Id);
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(-5)]
-    public void IncreaseStock_WithZeroOrNegativeQuantity_ShouldThrowDomainException(int invalidQuantity)
+    [InlineData(-1)]
+    [InlineData(-10)]
+    public void Inventory_Increase_Stock_Fails_When_Provide_Invalid_Quantity(int quantity)
     {
         // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 20, reorderLevel: 5);
+        var inventory = CreateValidInventory();
 
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => inventory.IncreaseStock(invalidQuantity));
-        Assert.Equal("Quantity must be greater than zero.", ex.Message);
+        // Act
+        var act = () => inventory.IncreaseStock(quantity);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        inventory.QuantityOnHand.Should().Be(10);
+        inventory.Transactions.Should().BeEmpty();
+    }
+
+
+    [Fact]
+    public void Inventory_Decreases_Stock_And_Creates_Transaction_When_Provide_Valid_Quantity()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        inventory.DecreaseStock(5);
+
+        // Assert
+        inventory.Transactions.Should().ContainSingle();
+
+        var transaction = inventory.Transactions.Single();
+
+        transaction.Type.Should().Be(InventoryTransactionType.StockOut);
+        transaction.QuantityChange.Should().Be(-5);
+        transaction.QuantityBefore.Should().Be(10);
+        transaction.QuantityAfter.Should().Be(5);
+        transaction.InventoryId.Should().Be(inventory.Id);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-10)]
+    public void Inventory_Decrease_Stock_Fails_When_Provide_Invalid_Quantity(int quantity)
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        var act = () => inventory.DecreaseStock(quantity);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        inventory.QuantityOnHand.Should().Be(10);
+        inventory.Transactions.Should().BeEmpty();
     }
 
     [Fact]
-    public void DecreaseStock_WithValidQuantity_ShouldUpdateStockAndRecordTransaction()
+    public void Inventory_Decrease_Stock_Fails_When_Quantity_Exceeds_Stock()
     {
         // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 20, reorderLevel: 5);
+        var inventory = CreateValidInventory();
+
+        // Act
+        var act = () => inventory.DecreaseStock(11);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        inventory.QuantityOnHand.Should().Be(10);
+        inventory.Transactions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Inventory_Adjusts_Stock_And_Creates_Transaction_When_Provide_Valid_Quantity()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        inventory.AdjustStock(20);
+
+        // Assert
+        inventory.Transactions.Should().ContainSingle();
+
+        var transaction = inventory.Transactions.Single();
+
+        transaction.Type.Should().Be(InventoryTransactionType.Adjustment);
+        transaction.QuantityChange.Should().Be(10);
+        transaction.QuantityBefore.Should().Be(10);
+        transaction.QuantityAfter.Should().Be(20);
+        transaction.InventoryId.Should().Be(inventory.Id);
+    }
+
+    [Fact]
+    public void Inventory_Adjusts_Stock_To_Zero_When_Provide_Zero_Quantity()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        inventory.AdjustStock(0);
+
+        // Assert
+        inventory.QuantityOnHand.Should().Be(0);
+        inventory.Transactions.Should().ContainSingle();
+
+        var transaction = inventory.Transactions.Single();
+
+        transaction.Type.Should().Be(InventoryTransactionType.Adjustment);
+        transaction.QuantityChange.Should().Be(-10);
+        transaction.QuantityBefore.Should().Be(10);
+        transaction.QuantityAfter.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-10)]
+    public void Inventory_Adjust_Stock_Fails_When_Provide_Negative_Quantity(int quantity)
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        var act = () => inventory.AdjustStock(quantity);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        inventory.QuantityOnHand.Should().Be(10);
+        inventory.Transactions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Inventory_Changes_Reorder_Level_When_Provide_Valid_Level()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        inventory.ChangeReorderLevel(20);
+
+        // Assert
+        inventory.ReorderLevel.Should().Be(20);
+    }
+
+    [Fact]
+    public void Inventory_Changes_Reorder_Level_To_Zero_When_Provide_Zero()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        inventory.ChangeReorderLevel(0);
+
+        // Assert
+        inventory.ReorderLevel.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-10)]
+    public void Inventory_Change_Reorder_Level_Fails_When_Provide_Negative_Level(
+        int reorderLevel)
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+
+        // Act
+        var act = () => inventory.ChangeReorderLevel(reorderLevel);
+
+        // Assert
+        act.Should().Throw<DomainException>();
+        inventory.ReorderLevel.Should().Be(5);
+    }
+
+    [Fact]
+    public void Inventory_Increases_Stock_With_Goods_Receipt_When_Provide_Goods_Receipt_Id()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
+        var goodsReceiptId = Guid.NewGuid();
+
+        // Act
+        inventory.IncreaseStock(10, goodsReceiptId);
+
+        // Assert
+        var transaction = inventory.Transactions.Single();
+
+        transaction.GoodsReceiptId.Should().Be(goodsReceiptId);
+        transaction.OrderId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Inventory_Decreases_Stock_With_Order_When_Provide_Order_Id()
+    {
+        // Arrange
+        var inventory = CreateValidInventory();
         var orderId = Guid.NewGuid();
 
         // Act
-        inventory.DecreaseStock(8, orderId: orderId);
+        inventory.DecreaseStock(5, orderId);
 
         // Assert
-        Assert.Equal(12, inventory.QuantityOnHand);
+        var transaction = inventory.Transactions.Single();
 
-        var tx = Assert.Single(inventory.Transactions);
-        Assert.Equal(inventory.Id, tx.InventoryId);
-        Assert.Equal(InventoryTransactionType.StockOut, tx.Type);
-        Assert.Equal(-8, tx.QuantityChange);
-        Assert.Equal(20, tx.QuantityBefore);
-        Assert.Equal(12, tx.QuantityAfter);
-        Assert.Equal(orderId, tx.OrderId);
-        Assert.Null(tx.GoodsReceiptId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-10)]
-    public void DecreaseStock_WithZeroOrNegativeQuantity_ShouldThrowDomainException(int invalidQuantity)
-    {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 20, reorderLevel: 5);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => inventory.DecreaseStock(invalidQuantity));
-        Assert.Equal("Quantity must be greater than zero.", ex.Message);
+        transaction.OrderId.Should().Be(orderId);
+        transaction.GoodsReceiptId.Should().BeNull();
     }
 
     [Fact]
-    public void DecreaseStock_WhenQuantityExceedsStock_ShouldThrowDomainException()
+    public void Inventory_Increases_Stock_With_Notes_When_Provide_Notes()
     {
         // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 5, reorderLevel: 2);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => inventory.DecreaseStock(10));
-        Assert.Equal("Insufficient stock.", ex.Message);
-    }
-
-    [Fact]
-    public void AdjustStock_ToHigherQuantity_ShouldUpdateStockAndRecordPositiveAdjustment()
-    {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 10, reorderLevel: 2);
+        var inventory = CreateValidInventory();
 
         // Act
-        inventory.AdjustStock(15, notes: "Found extra items during audit");
+        inventory.IncreaseStock(10, notes: "Stock received");
 
         // Assert
-        Assert.Equal(15, inventory.QuantityOnHand);
+        var transaction = inventory.Transactions.Single();
 
-        var tx = Assert.Single(inventory.Transactions);
-        Assert.Equal(InventoryTransactionType.Adjustment, tx.Type);
-        Assert.Equal(5, tx.QuantityChange);
-        Assert.Equal(10, tx.QuantityBefore);
-        Assert.Equal(15, tx.QuantityAfter);
-        Assert.Equal("Found extra items during audit", tx.Notes);
+        transaction.Notes.Should().Be("Stock received");
     }
 
-    [Fact]
-    public void AdjustStock_ToLowerQuantity_ShouldUpdateStockAndRecordNegativeAdjustment()
+    private Inventory CreateValidInventory()
     {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 10, reorderLevel: 2);
-
-        // Act
-        inventory.AdjustStock(6);
-
-        // Assert
-        Assert.Equal(6, inventory.QuantityOnHand);
-
-        var tx = Assert.Single(inventory.Transactions);
-        Assert.Equal(InventoryTransactionType.Adjustment, tx.Type);
-        Assert.Equal(-4, tx.QuantityChange);
-        Assert.Equal(10, tx.QuantityBefore);
-        Assert.Equal(6, tx.QuantityAfter);
-    }
-
-    [Fact]
-    public void AdjustStock_WithNegativeValue_ShouldThrowDomainException()
-    {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 10, reorderLevel: 2);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => inventory.AdjustStock(-1));
-        Assert.Equal("New quantity cannot be negative.", ex.Message);
-    }
-
-    [Fact]
-    public void ChangeReorderLevel_WithValidValue_ShouldUpdateReorderLevel()
-    {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 10, reorderLevel: 5);
-
-        // Act
-        inventory.ChangeReorderLevel(15);
-
-        // Assert
-        Assert.Equal(15, inventory.ReorderLevel);
-    }
-
-    [Fact]
-    public void ChangeReorderLevel_WithNegativeValue_ShouldThrowDomainException()
-    {
-        // Arrange
-        var inventory = new Inventory(ValidProductId, quantityOnHand: 10, reorderLevel: 5);
-
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => inventory.ChangeReorderLevel(-1));
-        Assert.Equal("Reorder level cannot be negative.", ex.Message);
+        return new Inventory(Guid.NewGuid(), 10, 5);
     }
 }

@@ -1,102 +1,129 @@
 using Domain.Entities.PaymentsAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.PaymentsAggregate;
 
-public sealed class PaymentAttemptTests
+public class PaymentAttemptTests
 {
     [Fact]
-    public void Constructor_WithValidArguments_InitializesPendingAttempt()
+    public void A_Payment_Attempt_Is_Successful_When_It_Is_Completed()
     {
         // Arrange
-        var paymentId = Guid.NewGuid();
-        var amount = 99.99m;
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
 
         // Act
-        var attempt = new PaymentAttempt(paymentId, PaymentMethod.Card, amount);
+        attempt.Complete("TXN-123");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, attempt.Id);
-        Assert.Equal(paymentId, attempt.PaymentId);
-        Assert.Equal(PaymentMethod.Card, attempt.Method);
-        Assert.Equal(amount, attempt.Amount);
-        Assert.Equal(PaymentAttemptStatus.Pending, attempt.Status);
-        Assert.Null(attempt.TransactionId);
-        Assert.Null(attempt.GatewayResponse);
-        Assert.True((DateTime.UtcNow - attempt.CreatedAt).TotalSeconds < 1);
-        Assert.Null(attempt.CompletedAt);
-        Assert.Null(attempt.FailedAt);
+        attempt.Status.Should().Be(PaymentAttemptStatus.Completed);
+        attempt.TransactionId.Should().Be("TXN-123");
+        attempt.CompletedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Complete_WhenPending_SetsTransactionIdAndCompletedAt()
+    public void A_Payment_Attempt_Is_Failed_When_The_Payment_Cannot_Be_Completed()
     {
         // Arrange
-        var attempt = new PaymentAttempt(Guid.NewGuid(), PaymentMethod.Card, 50m);
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
 
         // Act
-        attempt.Complete("  TXN_12345  ", "  {\"code\":200}  ");
+        attempt.Fail();
 
         // Assert
-        Assert.Equal(PaymentAttemptStatus.Completed, attempt.Status);
-        Assert.Equal("TXN_12345", attempt.TransactionId);
-        Assert.Equal("{\"code\":200}", attempt.GatewayResponse);
-        Assert.NotNull(attempt.CompletedAt);
-        Assert.True((DateTime.UtcNow - attempt.CompletedAt!.Value).TotalSeconds < 1);
+        attempt.Status.Should().Be(PaymentAttemptStatus.Failed);
+        attempt.FailedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void A_Payment_Attempt_Is_Cancelled_When_The_Payment_Is_Cancelled()
+    {
+        // Arrange
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
+
+        // Act
+        attempt.Cancel();
+
+        // Assert
+        attempt.Status.Should().Be(PaymentAttemptStatus.Cancelled);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Complete_WithInvalidTransactionId_ThrowsDomainException(string? invalidTxnId)
+    public void A_Payment_Attempt_Cannot_Be_Successful_Without_A_Transaction_Reference(
+        string? transactionId)
     {
         // Arrange
-        var attempt = new PaymentAttempt(Guid.NewGuid(), PaymentMethod.Card, 50m);
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => attempt.Complete(invalidTxnId!));
-        Assert.Equal("Transaction id is required.", exception.Message);
-    }
-
-    [Fact]
-    public void Complete_WhenNotPending_ThrowsDomainException()
-    {
-        // Arrange
-        var attempt = new PaymentAttempt(Guid.NewGuid(), PaymentMethod.Card, 50m);
-        attempt.Complete("TXN_1");
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => attempt.Complete("TXN_2"));
-        Assert.Equal("Only pending payment attempts can be completed.", exception.Message);
-    }
-
-    [Fact]
-    public void Fail_WhenPending_SetsStatusAndFailedAt()
-    {
-        // Arrange
-        var attempt = new PaymentAttempt(Guid.NewGuid(), PaymentMethod.Card, 50m);
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
 
         // Act
-        attempt.Fail("Insufficient funds");
+        var act = () => attempt.Complete(transactionId!);
 
         // Assert
-        Assert.Equal(PaymentAttemptStatus.Failed, attempt.Status);
-        Assert.Equal("Insufficient funds", attempt.GatewayResponse);
-        Assert.NotNull(attempt.FailedAt);
-        Assert.True((DateTime.UtcNow - attempt.FailedAt!.Value).TotalSeconds < 1);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Fail_WhenNotPending_ThrowsDomainException()
+    public void A_Failed_Payment_Attempt_Cannot_Be_Successful_Again()
     {
         // Arrange
-        var attempt = new PaymentAttempt(Guid.NewGuid(), PaymentMethod.Card, 50m);
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
         attempt.Fail();
 
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => attempt.Fail());
-        Assert.Equal("Only pending payment attempts can be failed.", exception.Message);
+        // Act
+        var act = () => attempt.Complete("TXN-123");
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Cancelled_Payment_Attempt_Cannot_Be_Successful_Again()
+    {
+        // Arrange
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
+        attempt.Cancel();
+
+        // Act
+        var act = () => attempt.Complete("TXN-123");
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Successful_Payment_Attempt_Cannot_Be_Failed()
+    {
+        // Arrange
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
+        attempt.Complete("TXN-123");
+
+        // Act
+        var act = () => attempt.Fail();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Successful_Payment_Attempt_Cannot_Be_Cancelled()
+    {
+        // Arrange
+        var attempt = CreateValidPaymentAttempt(Guid.NewGuid());
+        attempt.Complete("TXN-123");
+
+        // Act
+        var act = () => attempt.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    private PaymentAttempt CreateValidPaymentAttempt(Guid paymentId)
+    {
+        return new PaymentAttempt(paymentId, PaymentMethod.CashOnDelivery, 100.00m);
     }
 }

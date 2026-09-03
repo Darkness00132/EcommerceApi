@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Domain.Common;
 using Domain.Entities.Identity;
@@ -52,8 +51,7 @@ public sealed class Order : AggregateRoot
 
     public Order(
         Guid userId,
-        Address shippingAddress,
-        Guid? promoCodeId = null)
+        Address shippingAddress)
         : base(Guid.NewGuid())
     {
         if (userId == Guid.Empty)
@@ -61,7 +59,6 @@ public sealed class Order : AggregateRoot
 
         UserId = userId;
         ShippingAddress = shippingAddress ?? throw new DomainException("Shipping address is required.");
-        PromoCodeId = promoCodeId;
         Status = OrderStatus.Pending;
         CreatedAt = DateTime.UtcNow;
     }

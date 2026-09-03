@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Domain.Entities.ProcurementAggregate;
 
-public sealed class PurchaseOrder : AggregateRoot
+public class PurchaseOrder : AggregateRoot
 {
     [MaxLength(50)]
     public string Number { get; private set; } = null!;

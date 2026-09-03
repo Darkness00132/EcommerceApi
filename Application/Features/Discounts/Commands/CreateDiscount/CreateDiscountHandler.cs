@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Application.Abstractions.Repositories;
-using AutoMapper;
 using Domain.Entities.Catalog;
 using Domain.ValueObjects;
 using MediatR;
