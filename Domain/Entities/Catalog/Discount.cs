@@ -66,7 +66,7 @@ public sealed class Discount : Entity
 
     public bool IsValidOn(DateOnly date)
     {
-        return IsVisible && ValidityPeriod.Contains(date);
+        return IsVisible && ValidityPeriod.IsValidOn(date);
     }
 
     public void Activate() => IsVisible = true;

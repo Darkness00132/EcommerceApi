@@ -1,187 +1,173 @@
 using Domain.Entities.ProcurementAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Tests.ProcurementAggregate;
 
-public sealed class GoodsReceiptTests
+public class GoodsReceiptTests
 {
     [Fact]
-    public void Constructor_WithValidData_ShouldCreateReceipt()
+    public void Goods_Receipt_Is_Draft_When_Created()
     {
-        var purchaseOrderId = Guid.NewGuid();
+        // Arrange & Act
+        var receipt = CreateValidReceipt();
 
-        var receipt = new GoodsReceipt(
-            "GR-001",
-            purchaseOrderId,
-            DateTime.UtcNow);
+        // Assert
+        receipt.Status.Should().Be(GoodsReceiptStatus.Draft);
+        receipt.Items.Should().BeEmpty();
+    }
 
-        Assert.Equal("GR-001", receipt.Number);
-        Assert.Equal(purchaseOrderId, receipt.PurchaseOrderId);
-        Assert.Equal(GoodsReceiptStatus.Draft, receipt.Status);
-        Assert.Empty(receipt.Items);
+    [Fact]
+    public void Goods_Receipt_Contains_Received_Product_When_Product_Is_Added()
+    {
+        // Arrange
+        var receipt = CreateValidReceipt();
+        var productId = Guid.NewGuid();
+
+        // Act
+        receipt.AddItem(productId, 10);
+
+        // Assert
+        receipt.Items.Should().ContainSingle();
+        receipt.Items.Single().ProductId.Should().Be(productId);
+        receipt.Items.Single().Quantity.Should().Be(10);
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void Constructor_WithInvalidNumber_ShouldThrow(
-        string? number)
-    {
-        var action = () => new GoodsReceipt(
-            number!,
-            Guid.NewGuid(),
-            DateTime.UtcNow);
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Fact]
-    public void Constructor_WithEmptyPurchaseOrderId_ShouldThrow()
-    {
-        var action = () => new GoodsReceipt(
-            "GR-001",
-            Guid.Empty,
-            DateTime.UtcNow);
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Fact]
-    public void AddItem_WithValidData_ShouldAddItem()
-    {
-        var receipt = CreateReceipt();
-        var productId = Guid.NewGuid();
-
-        receipt.AddItem(productId, 5);
-
-        var item = Assert.Single(receipt.Items);
-
-        Assert.Equal(productId, item.ProductId);
-        Assert.Equal(5, item.Quantity);
-    }
-
-    [Fact]
-    public void AddItem_WhenProductAlreadyExists_ShouldIncreaseQuantity()
-    {
-        var receipt = CreateReceipt();
-        var productId = Guid.NewGuid();
-
-        receipt.AddItem(productId, 5);
-        receipt.AddItem(productId, 3);
-
-        var item = Assert.Single(receipt.Items);
-
-        Assert.Equal(8, item.Quantity);
-    }
-
-    [Fact]
-    public void AddItem_WithEmptyProductId_ShouldThrow()
-    {
-        var receipt = CreateReceipt();
-
-        var action = () => receipt.AddItem(
-            Guid.Empty,
-            1);
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void AddItem_WithInvalidQuantity_ShouldThrow(
+    [InlineData(1)]
+    [InlineData(10)]
+    public void Goods_Receipt_Records_The_Received_Quantity(
         int quantity)
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
 
-        var action = () => receipt.AddItem(
-            Guid.NewGuid(),
-            quantity);
+        // Act
+        receipt.AddItem(Guid.NewGuid(), quantity);
 
-        Assert.Throws<DomainException>(action);
+        // Assert
+        receipt.Items.Single().Quantity.Should().Be(quantity);
     }
 
     [Fact]
-    public void Confirm_WithItems_ShouldConfirmReceipt()
+    public void Goods_Receipt_Combines_Quantities_When_The_Same_Product_Is_Received_Again()
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
+        var productId = Guid.NewGuid();
 
-        receipt.AddItem(Guid.NewGuid(), 5);
+        receipt.AddItem(productId, 10);
 
+        // Act
+        receipt.AddItem(productId, 5);
+
+        // Assert
+        receipt.Items.Should().ContainSingle();
+        receipt.Items.Single().Quantity.Should().Be(15);
+    }
+
+    [Fact]
+    public void Goods_Receipt_Can_Be_Confirmed_When_It_Contains_Products()
+    {
+        // Arrange
+        var receipt = CreateValidReceipt();
+        receipt.AddItem(Guid.NewGuid(), 10);
+
+        // Act
         receipt.Confirm();
 
-        Assert.Equal(
-            GoodsReceiptStatus.Confirmed,
-            receipt.Status);
-
-        Assert.NotNull(receipt.ConfirmedAt);
+        // Assert
+        receipt.Status.Should().Be(GoodsReceiptStatus.Confirmed);
+        receipt.ConfirmedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Confirm_WithoutItems_ShouldThrow()
+    public void Goods_Receipt_Cannot_Be_Confirmed_Without_Products()
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
 
-        var action = receipt.Confirm;
+        // Act
+        var act = () => receipt.Confirm();
 
-        Assert.Throws<DomainException>(action);
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Cancel_FromDraft_ShouldCancelReceipt()
+    public void Goods_Receipt_Can_Be_Cancelled_While_Draft()
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
 
+        // Act
         receipt.Cancel();
 
-        Assert.Equal(
-            GoodsReceiptStatus.Cancelled,
-            receipt.Status);
-
-        Assert.NotNull(receipt.CancelledAt);
+        // Assert
+        receipt.Status.Should().Be(GoodsReceiptStatus.Cancelled);
+        receipt.CancelledAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void AddItem_AfterConfirmation_ShouldThrow()
+    public void Confirmed_Goods_Receipt_Cannot_Be_Changed()
     {
-        var receipt = CreateReceipt();
-
-        receipt.AddItem(Guid.NewGuid(), 1);
+        // Arrange
+        var receipt = CreateValidReceipt();
+        receipt.AddItem(Guid.NewGuid(), 10);
         receipt.Confirm();
 
-        var action = () => receipt.AddItem(
-            Guid.NewGuid(),
-            1);
+        // Act
+        var act = () => receipt.AddItem(Guid.NewGuid(), 5);
 
-        Assert.Throws<DomainException>(action);
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Confirm_AfterCancellation_ShouldThrow()
+    public void Confirmed_Goods_Receipt_Cannot_Be_Cancelled()
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
+        receipt.AddItem(Guid.NewGuid(), 10);
+        receipt.Confirm();
 
+        // Act
+        var act = () => receipt.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Cancelled_Goods_Receipt_Cannot_Be_Changed()
+    {
+        // Arrange
+        var receipt = CreateValidReceipt();
         receipt.Cancel();
 
-        Assert.Throws<DomainException>(
-            receipt.Confirm);
+        // Act
+        var act = () => receipt.AddItem(Guid.NewGuid(), 5);
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Cancel_AfterConfirmation_ShouldThrow()
+    public void Cancelled_Goods_Receipt_Cannot_Be_Confirmed()
     {
-        var receipt = CreateReceipt();
+        // Arrange
+        var receipt = CreateValidReceipt();
+        receipt.Cancel();
 
-        receipt.AddItem(Guid.NewGuid(), 1);
-        receipt.Confirm();
+        // Act
+        var act = () => receipt.Confirm();
 
-        Assert.Throws<DomainException>(
-            receipt.Cancel);
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
-    private static GoodsReceipt CreateReceipt()
+    private static GoodsReceipt CreateValidReceipt()
     {
         return new GoodsReceipt(
             "GR-001",

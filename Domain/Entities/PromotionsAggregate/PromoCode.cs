@@ -77,7 +77,7 @@ public sealed class PromoCode : AggregateRoot
         if (!IsActive)
             return false;
 
-        if (!ValidityPeriod.Contains(currentDate))
+        if (!ValidityPeriod.IsValidOn(currentDate))
             return false;
 
         if (orderTotal < MinimumOrder)

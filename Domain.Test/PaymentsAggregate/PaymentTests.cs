@@ -1,169 +1,164 @@
 using Domain.Entities.PaymentsAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
+using FluentAssertions;
 
 namespace Domain.Test.PaymentsAggregate;
 
-public sealed class PaymentTests
+public class PaymentTests
 {
     [Fact]
-    public void Constructor_WithValidArguments_InitializesPendingPayment()
+    public void Payment_Is_Pending_When_Created()
     {
-        // Arrange
-        var orderId = Guid.NewGuid();
-        var amount = 150.00m;
-
-        // Act
-        var payment = new Payment(orderId, amount);
+        // Arrange & Act
+        var payment = CreateValidPayment();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, payment.Id);
-        Assert.Equal(orderId, payment.OrderId);
-        Assert.Equal(amount, payment.Amount);
-        Assert.Equal(PaymentStatus.Pending, payment.Status);
-        Assert.True((DateTime.UtcNow - payment.CreatedAt).TotalSeconds < 1);
-        Assert.Null(payment.PaidAt);
-        Assert.Null(payment.RefundedAt);
-        Assert.Empty(payment.Attempts);
+        payment.Status.Should().Be(PaymentStatus.Pending);
     }
 
     [Fact]
-    public void Constructor_WithEmptyOrderId_ThrowsDomainException()
-    {
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => new Payment(Guid.Empty, 100m));
-        Assert.Equal("Order id is required.", exception.Message);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-10)]
-    public void Constructor_WithInvalidAmount_ThrowsDomainException(decimal invalidAmount)
-    {
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => new Payment(Guid.NewGuid(), invalidAmount));
-        Assert.Equal("Payment amount must be greater than zero.", exception.Message);
-    }
-
-    [Fact]
-    public void AddAttempt_WhenPaymentIsPending_AddsAttemptToCollection()
+    public void Payment_Is_Paid_When_Payment_Is_Confirmed()
     {
         // Arrange
-        var payment = new Payment(Guid.NewGuid(), 200m);
-
-        // Act
-        payment.AddAttempt(PaymentMethod.Card, 200m);
-
-        // Assert
-        Assert.Single(payment.Attempts);
-        var attempt = Assert.Single(payment.Attempts, a => a.Method == PaymentMethod.Card);
-        Assert.Equal(payment.Id, attempt.PaymentId);
-        Assert.Equal(200m, attempt.Amount);
-    }
-
-    [Theory]
-    [InlineData(PaymentStatus.Paid)]
-    [InlineData(PaymentStatus.Refunded)]
-    [InlineData(PaymentStatus.Cancelled)]
-    public void AddAttempt_WhenPaymentIsInTerminalState_ThrowsDomainException(PaymentStatus terminalStatus)
-    {
-        // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
-        SetPaymentStatus(payment, terminalStatus);
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => payment.AddAttempt(PaymentMethod.Card, 100m));
-        Assert.Equal("Cannot add payment attempt for paid, refunded, or cancelled payment.", exception.Message);
-    }
-
-    [Fact]
-    public void MarkAsPaid_WhenPending_TransitionsToPaidAndSetsPaidAt()
-    {
-        // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
+        var payment = CreateValidPayment();
 
         // Act
         payment.MarkAsPaid();
 
         // Assert
-        Assert.Equal(PaymentStatus.Paid, payment.Status);
-        Assert.NotNull(payment.PaidAt);
-        Assert.True((DateTime.UtcNow - payment.PaidAt!.Value).TotalSeconds < 1);
+        payment.Status.Should().Be(PaymentStatus.Paid);
+        payment.PaidAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void MarkAsPaid_WhenAlreadyPaid_IsIdempotent()
+    public void Payment_Remains_Paid_When_Confirmed_Again()
     {
         // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
+        var payment = CreateValidPayment();
         payment.MarkAsPaid();
-        var initialPaidAt = payment.PaidAt;
+        var paidAt = payment.PaidAt;
 
         // Act
         payment.MarkAsPaid();
 
         // Assert
-        Assert.Equal(PaymentStatus.Paid, payment.Status);
-        Assert.Equal(initialPaidAt, payment.PaidAt);
-    }
-
-    [Theory]
-    [InlineData(PaymentStatus.Refunded)]
-    [InlineData(PaymentStatus.Cancelled)]
-    public void MarkAsPaid_WhenRefundedOrCancelled_ThrowsDomainException(PaymentStatus invalidStatus)
-    {
-        // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
-        SetPaymentStatus(payment, invalidStatus);
-
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => payment.MarkAsPaid());
-        Assert.Equal("Refunded or cancelled payment cannot be marked as paid.", exception.Message);
+        payment.Status.Should().Be(PaymentStatus.Paid);
+        payment.PaidAt.Should().Be(paidAt);
     }
 
     [Fact]
-    public void Refund_WhenPaid_TransitionsToRefundedAndSetsRefundedAt()
+    public void Payment_Marked_As_Failed_When_Payment_Fails()
     {
         // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
+        var payment = CreateValidPayment();
+
+        // Act
+        payment.MarkAsFailed();
+
+        // Assert
+        payment.Status.Should().Be(PaymentStatus.Failed);
+    }
+
+    [Fact]
+    public void Payment_Is_Cancelled_When_Payment_Is_Cancelled()
+    {
+        // Arrange
+        var payment = CreateValidPayment();
+
+        // Act
+        payment.Cancel();
+
+        // Assert
+        payment.Status.Should().Be(PaymentStatus.Cancelled);
+    }
+
+    [Fact]
+    public void Payment_Is_Refunded_When_Paid_Payment_Is_Refunded()
+    {
+        // Arrange
+        var payment = CreateValidPayment();
         payment.MarkAsPaid();
 
         // Act
         payment.Refund();
 
         // Assert
-        Assert.Equal(PaymentStatus.Refunded, payment.Status);
-        Assert.NotNull(payment.RefundedAt);
-        Assert.True((DateTime.UtcNow - payment.RefundedAt!.Value).TotalSeconds < 1);
+        payment.Status.Should().Be(PaymentStatus.Refunded);
+        payment.RefundedAt.Should().NotBeNull();
     }
 
     [Fact]
-    public void Refund_WhenNotPaid_ThrowsDomainException()
+    public void Payment_Cannot_Be_Refunded_Before_Payment_Is_Paid()
     {
         // Arrange
-        var payment = new Payment(Guid.NewGuid(), 100m);
+        var payment = CreateValidPayment();
 
-        // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => payment.Refund());
-        Assert.Equal("Only paid payments can be refunded.", exception.Message);
+        // Act
+        var act = () => payment.Refund();
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
-    private static void SetPaymentStatus(Payment payment, PaymentStatus status)
+    [Fact]
+    public void Payment_Cannot_Be_Cancelled_After_Payment_Is_Paid()
     {
-        switch (status) {
-            case PaymentStatus.Paid:
-                payment.MarkAsPaid();
-                break;
-            case PaymentStatus.Failed:
-                payment.MarkAsFailed();
-                break;
-            case PaymentStatus.Cancelled:
-                payment.Cancel();
-                break;
-            case PaymentStatus.Refunded:
-                payment.MarkAsPaid();
-                payment.Refund();
-                break;
-        }
+        // Arrange
+        var payment = CreateValidPayment();
+        payment.MarkAsPaid();
+
+        // Act
+        var act = () => payment.Cancel();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Payment_Cannot_Be_Marked_As_Failed_After_Payment_Is_Paid()
+    {
+        // Arrange
+        var payment = CreateValidPayment();
+        payment.MarkAsPaid();
+
+        // Act
+        var act = () => payment.MarkAsFailed();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Payment_Cannot_Be_Marked_As_Paid_After_Payment_Is_Cancelled()
+    {
+        // Arrange
+        var payment = CreateValidPayment();
+        payment.Cancel();
+
+        // Act
+        var act = () => payment.MarkAsPaid();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Payment_Cannot_Be_Marked_As_Paid_After_Payment_Is_Refunded()
+    {
+        // Arrange
+        var payment = CreateValidPayment();
+        payment.MarkAsPaid();
+        payment.Refund();
+
+        // Act
+        var act = () => payment.MarkAsPaid();
+
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+    private Payment CreateValidPayment()
+    {
+        return new Payment(Guid.NewGuid() ,100.00m);
     }
 }

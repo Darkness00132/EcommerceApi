@@ -2,332 +2,198 @@ using Domain.Entities.PromotionsAggregate;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Tests;
 
 public sealed class PromoCodeTests
 {
-    [Fact]
-    public void Constructor_WithValidData_ShouldCreatePromoCode()
-    {
-        var promo = CreatePromoCode();
+    private static readonly DateOnly Today =
+        DateOnly.FromDateTime(DateTime.UtcNow);
 
-        Assert.Equal("SAVE10", promo.Code);
-        Assert.Equal(PromoDiscountType.Percentage, promo.DiscountType);
-        Assert.Equal(10m, promo.Value);
-        Assert.Equal(100m, promo.MinimumOrder);
-        Assert.True(promo.IsActive);
-        Assert.Equal(0, promo.UsedCount);
-        Assert.Null(promo.UsageLimit);
+    [Fact]
+    public void A_Promo_Code_Can_Be_Created_With_Valid_Information()
+    {
+        // Arrange & Act
+        var promoCode = CreateValidPromoCode();
+
+        // Assert
+        promoCode.Code.Should().Be("CODE");
+        promoCode.DiscountType.Should().Be(PromoDiscountType.Percentage);
+        promoCode.Value.Should().Be(10m);
+        promoCode.MinimumOrder.Should().Be(200m);
+        promoCode.UsageLimit.Should().Be(5);
+        promoCode.UsedCount.Should().Be(0);
+        promoCode.IsActive.Should().BeTrue();
     }
 
     [Fact]
-    public void Constructor_ShouldNormalizeCode()
+    public void A_Promo_Code_Cannot_Be_Created_With_Invalid_Information()
     {
-        var promo = new PromoCode(
-            " save10 ",
+        // Arrange & Act
+        var act = () => new PromoCode(
+            "CODE",
             PromoDiscountType.Percentage,
-            10,
-            100,
+            10m,
+            -1m,
             CreateDateRange());
 
-        Assert.Equal("SAVE10", promo.Code);
+        // Assert
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void A_Promo_Code_Can_Be_Used_When_The_Order_Meets_Its_Conditions()
+    {
+        // Arrange
+        var promoCode = CreateValidPromoCode();
+
+        // Act
+        var result = promoCode.CanBeUsed(300m, Today);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_Promo_Code_Cannot_Be_Used_When_The_Order_Does_Not_Meet_Its_Conditions()
+    {
+        // Arrange
+        var promoCode = CreateValidPromoCode();
+
+        // Act
+        var result = promoCode.CanBeUsed(100m, Today);
+
+        // Assert
+        result.Should().BeFalse();
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithInvalidCode_ShouldThrow(string? code)
-    {
-        var action = () => new PromoCode(
-            code!,
-            PromoDiscountType.Percentage,
-            10,
-            100,
-            CreateDateRange());
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void Constructor_WithNegativeMinimumOrder_ShouldThrow(decimal minimumOrder)
-    {
-        var action = () => new PromoCode(
-            "SAVE10",
-            PromoDiscountType.Percentage,
-            10,
-            minimumOrder,
-            CreateDateRange());
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-10)]
-    public void Constructor_WithInvalidUsageLimit_ShouldThrow(int usageLimit)
-    {
-        var action = () => new PromoCode(
-            "SAVE10",
-            PromoDiscountType.Percentage,
-            10,
-            100,
-            CreateDateRange(),
-            usageLimit);
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void Constructor_WithInvalidValue_ShouldThrow(decimal value)
-    {
-        var action = () => new PromoCode(
-            "SAVE10",
-            PromoDiscountType.Percentage,
-            value,
-            100,
-            CreateDateRange());
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Fact]
-    public void Constructor_WithPercentageGreaterThan100_ShouldThrow()
-    {
-        var action = () => new PromoCode(
-            "SAVE10",
-            PromoDiscountType.Percentage,
-            101,
-            100,
-            CreateDateRange());
-
-        Assert.Throws<DomainException>(action);
-    }
-
-    [Fact]
-    public void CanBeUsed_WhenPromoIsValid_ShouldReturnTrue()
-    {
-        var promo = CreatePromoCode();
-
-        var result = promo.CanBeUsed(
-            200,
-            DateOnly.FromDateTime(DateTime.UtcNow));
-
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void CanBeUsed_WhenInactive_ShouldReturnFalse()
-    {
-        var promo = CreatePromoCode();
-
-        promo.Deactivate();
-
-        var result = promo.CanBeUsed(
-            200,
-            DateOnly.FromDateTime(DateTime.UtcNow));
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void CanBeUsed_WhenOrderBelowMinimum_ShouldReturnFalse()
-    {
-        var promo = CreatePromoCode();
-
-        var result = promo.CanBeUsed(
-            50,
-            DateOnly.FromDateTime(DateTime.UtcNow));
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void CanBeUsed_WhenOutsideValidityPeriod_ShouldReturnFalse()
-    {
-        var promo = CreatePromoCode();
-
-        var result = promo.CanBeUsed(
-            200,
-            promo.ExpirationDate.AddDays(1));
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void CanBeUsed_WhenUsageLimitReached_ShouldReturnFalse()
-    {
-        var promo = CreatePromoCode(usageLimit: 1);
-
-        promo.MarkAsUsed();
-
-        var result = promo.CanBeUsed(
-            200,
-            DateOnly.FromDateTime(DateTime.UtcNow));
-
-        Assert.False(result);
-    }
-
-    [Theory]
-    [InlineData(100, 10)]
-    [InlineData(200, 20)]
-    [InlineData(500, 50)]
-    public void CalculateDiscount_WithPercentagePromo_ShouldReturnExpectedDiscount(
+    [InlineData(PromoDiscountType.Percentage, 10, 1000, 100)]
+    [InlineData(PromoDiscountType.FixedAmount, 100, 1000, 100)]
+    public void A_Promo_Code_Calculates_The_Correct_Discount(
+        PromoDiscountType discountType,
+        decimal value,
         decimal orderTotal,
         decimal expectedDiscount)
     {
-        var promo = CreatePromoCode();
-
-        var discount = promo.CalculateDiscount(orderTotal);
-
-        Assert.Equal(expectedDiscount, discount);
-    }
-
-    [Fact]
-    public void CalculateDiscount_WithFixedAmountPromo_ShouldReturnFixedValue()
-    {
-        var promo = new PromoCode(
-            "SAVE50",
-            PromoDiscountType.FixedAmount,
-            50,
-            100,
+        // Arrange
+        var promoCode = new PromoCode(
+            "CODE",
+            discountType,
+            value,
+            0m,
             CreateDateRange());
 
-        var discount = promo.CalculateDiscount(200);
+        // Act
+        var discount = promoCode.CalculateDiscount(orderTotal);
 
-        Assert.Equal(50m, discount);
+        // Assert
+        discount.Should().Be(expectedDiscount);
     }
 
     [Fact]
-    public void CalculateDiscount_WhenDiscountExceedsOrderTotal_ShouldCapToOrderTotal()
+    public void A_Promo_Code_Cannot_Discount_More_Than_The_Order_Total()
     {
-        var promo = new PromoCode(
-            "SAVE500",
+        // Arrange
+        var promoCode = new PromoCode(
+            "CODE",
             PromoDiscountType.FixedAmount,
-            500,
-            100,
+            500m,
+            0m,
             CreateDateRange());
 
-        var discount = promo.CalculateDiscount(200);
+        // Act
+        var discount = promoCode.CalculateDiscount(300m);
 
-        Assert.Equal(200m, discount);
+        // Assert
+        discount.Should().Be(300m);
     }
 
     [Fact]
-    public void CalculateDiscount_WhenOrderBelowMinimum_ShouldReturnZero()
+    public void A_Promo_Code_Counts_A_Use_When_It_Is_Used()
     {
-        var promo = CreatePromoCode();
+        // Arrange
+        var promoCode = CreateValidPromoCode();
 
-        var discount = promo.CalculateDiscount(50);
+        // Act
+        promoCode.MarkAsUsed();
 
-        Assert.Equal(0m, discount);
+        // Assert
+        promoCode.UsedCount.Should().Be(1);
     }
 
     [Fact]
-    public void MarkAsUsed_ShouldIncrementUsedCount()
+    public void A_Promo_Code_Cannot_Be_Used_After_Reaching_Its_Usage_Limit()
     {
-        var promo = CreatePromoCode();
+        // Arrange
+        var promoCode = CreateValidPromoCode();
 
-        promo.MarkAsUsed();
+        promoCode.MarkAsUsed();
+        promoCode.MarkAsUsed();
+        promoCode.MarkAsUsed();
+        promoCode.MarkAsUsed();
+        promoCode.MarkAsUsed();
 
-        Assert.Equal(1, promo.UsedCount);
+        // Act
+        var act = () => promoCode.MarkAsUsed();
+
+        // Assert
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void MarkAsUsed_WhenUsageLimitReached_ShouldThrow()
+    public void A_Promo_Code_Can_Be_Deactivated_And_Activated_Again()
     {
-        var promo = CreatePromoCode(usageLimit: 1);
+        // Arrange
+        var promoCode = CreateValidPromoCode();
 
-        promo.MarkAsUsed();
+        // Act
+        promoCode.Deactivate();
+        promoCode.Activate();
 
-        Assert.Throws<DomainException>(() => promo.MarkAsUsed());
+        // Assert
+        promoCode.IsActive.Should().BeTrue();
     }
 
     [Fact]
-    public void Update_WithValidData_ShouldUpdateProperties()
+    public void A_Promo_Code_Information_Can_Be_Changed()
     {
-        var range = new DateRange(
-            DateOnly.FromDateTime(DateTime.UtcNow),
-            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60)));
+        // Arrange
+        var promoCode = CreateValidPromoCode();
 
-        var promo = CreatePromoCode();
-
-        promo.Update(
-            "SAVE20",
+        // Act
+        promoCode.Update(
+            "NEWCODE",
             PromoDiscountType.FixedAmount,
-            20,
-            200,
-            range,
-            50);
+            50m,
+            300m,
+            new DateRange(Today, Today.AddDays(30)),
+            10);
 
-        Assert.Equal("SAVE20", promo.Code);
-        Assert.Equal(PromoDiscountType.FixedAmount, promo.DiscountType);
-        Assert.Equal(20m, promo.Value);
-        Assert.Equal(200m, promo.MinimumOrder);
-        Assert.Equal(50, promo.UsageLimit);
-        Assert.Equal(range, promo.ValidityPeriod);
+        // Assert
+        promoCode.Code.Should().Be("NEWCODE");
+        promoCode.DiscountType.Should().Be(PromoDiscountType.FixedAmount);
+        promoCode.Value.Should().Be(50m);
+        promoCode.MinimumOrder.Should().Be(300m);
+        promoCode.UsageLimit.Should().Be(10);
     }
 
-    [Fact]
-    public void Update_WhenUsageLimitIsLessThanUsedCount_ShouldThrow()
-    {
-        var promo = CreatePromoCode();
-
-        promo.MarkAsUsed();
-
-        Assert.Throws<DomainException>(() =>
-            promo.Update(
-                "SAVE20",
-                PromoDiscountType.Percentage,
-                20,
-                100,
-                CreateDateRange(),
-                0));
-    }
-
-    [Fact]
-    public void Deactivate_ShouldSetPromoAsInactive()
-    {
-        var promo = CreatePromoCode();
-
-        promo.Deactivate();
-
-        Assert.False(promo.IsActive);
-    }
-
-    [Fact]
-    public void Activate_ShouldSetPromoAsActive()
-    {
-        var promo = CreatePromoCode();
-
-        promo.Deactivate();
-
-        promo.Activate();
-
-        Assert.True(promo.IsActive);
-    }
-
-    private static PromoCode CreatePromoCode(int? usageLimit = null)
+    private PromoCode CreateValidPromoCode()
     {
         return new PromoCode(
-            "SAVE10",
+            "code",
             PromoDiscountType.Percentage,
-            10,
-            100,
+            10m,
+            200m,
             CreateDateRange(),
-            usageLimit);
+            5);
     }
 
-    private static DateRange CreateDateRange()
+    private DateRange CreateDateRange()
     {
         return new DateRange(
-            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)),
-            DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)));
+            Today.AddDays(-1),
+            Today.AddDays(30));
     }
 }

@@ -20,7 +20,7 @@ public sealed record DateRange
         EndDate = endDate;
     }
 
-    public bool Contains(DateOnly date)
+    public bool IsValidOn(DateOnly date)
     {
         return date >= StartDate && date <= EndDate;
     }

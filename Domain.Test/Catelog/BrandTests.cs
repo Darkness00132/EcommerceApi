@@ -25,7 +25,7 @@ public class BrandTests
     public void Brand_Creation_Fails_When_Provide_Invalid_English_Or_Arabic_Name(string nameEn,string nameAr)
     {
         // Arrange & Act
-        var act = () => new Brand(nameEn, "brand");
+        var act = () => new Brand(nameEn, nameAr);
 
         // Assert
         act.Should().Throw<DomainException>();

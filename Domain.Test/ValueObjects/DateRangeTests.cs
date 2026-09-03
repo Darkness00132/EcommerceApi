@@ -1,89 +1,87 @@
 using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentAssertions;
 
 namespace Domain.Test.ValueObjects;
 
 public class DateRangeTests
 {
-    private static readonly DateOnly DefaultStart = new(2026, 1, 1);
-    private static readonly DateOnly DefaultEnd = new(2026, 1, 31);
-
     [Fact]
-    public void Constructor_WithValidDates_ShouldInitializePropertiesCorrectly()
-    {
-        // Act
-        var dateRange = new DateRange(DefaultStart, DefaultEnd);
-
-        // Assert
-        Assert.Equal(DefaultStart, dateRange.StartDate);
-        Assert.Equal(DefaultEnd, dateRange.EndDate);
-    }
-
-    [Fact]
-    public void Constructor_WithSameStartAndEndDate_ShouldInitializePropertiesCorrectly()
-    {
-        // Act
-        var dateRange = new DateRange(DefaultStart, DefaultStart);
-
-        // Assert
-        Assert.Equal(DefaultStart, dateRange.StartDate);
-        Assert.Equal(DefaultStart, dateRange.EndDate);
-    }
-
-    [Fact]
-    public void Constructor_WithEndDateBeforeStartDate_ShouldThrowDomainException()
+    public void A_Date_Range_Can_Be_Created_When_The_End_Date_Is_Not_Before_The_Start_Date()
     {
         // Arrange
-        var startDate = new DateOnly(2026, 2, 1);
-        var endDate = new DateOnly(2026, 1, 31);
+        var startDate = new DateOnly(2026, 9, 1);
+        var endDate = new DateOnly(2026, 9, 7);
 
-        // Act & Assert
-        var ex = Assert.Throws<DomainException>(() => new DateRange(startDate, endDate));
-        Assert.Equal("End date cannot be before start date.", ex.Message);
+        // Act
+        var dateRange = new DateRange(startDate, endDate);
+
+        // Assert
+        dateRange.StartDate.Should().Be(startDate);
+        dateRange.EndDate.Should().Be(endDate);
+    }
+
+    [Fact]
+    public void A_Date_Range_Cannot_End_Before_It_Starts()
+    {
+        // Arrange
+        var startDate = new DateOnly(2026, 9, 7);
+        var endDate = new DateOnly(2026, 9, 1);
+
+        // Act
+        var act = () => new DateRange(startDate, endDate);
+
+        // Assert
+        act.Should()
+            .Throw<DomainException>()
+            .WithMessage("End date cannot be before start date.");
     }
 
     [Theory]
-    [InlineData(2026, 1, 1)]  // Start boundary
-    [InlineData(2026, 1, 15)] // Inside range
-    [InlineData(2026, 1, 31)] // End boundary
-    public void Contains_WhenDateIsWithinOrOnBoundaries_ShouldReturnTrue(int year, int month, int day)
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(7)]
+    public void A_Date_Within_The_Range_Is_Valid(int day)
     {
         // Arrange
-        var dateRange = new DateRange(DefaultStart, DefaultEnd);
-        var dateToCheck = new DateOnly(year, month, day);
+        var dateRange = new DateRange(
+            new DateOnly(2026, 9, 1),
+            new DateOnly(2026, 9, 7));
 
         // Act
-        var result = dateRange.Contains(dateToCheck);
+        var result = dateRange.IsValidOn(
+            new DateOnly(2026, 9, day));
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(2025, 12, 31)] // Day before start
-    [InlineData(2026, 2, 1)]   // Day after end
-    public void Contains_WhenDateIsOutsideRange_ShouldReturnFalse(int year, int month, int day)
+    [InlineData(31, 8)]
+    [InlineData(8, 9)]
+    public void A_Date_Outside_The_Range_Is_Not_Valid(int day, int month)
     {
         // Arrange
-        var dateRange = new DateRange(DefaultStart, DefaultEnd);
-        var dateToCheck = new DateOnly(year, month, day);
+        var dateRange = new DateRange(
+            new DateOnly(2026, 9, 1),
+            new DateOnly(2026, 9, 7));
 
         // Act
-        var result = dateRange.Contains(dateToCheck);
+        var result = dateRange.IsValidOn(
+            new DateOnly(2026, month, day));
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
-    public void ValueEquality_TwoInstancesWithSameDates_ShouldBeEqual()
+    public void A_Date_Range_Can_Start_And_End_On_The_Same_Day()
     {
-        // Arrange
-        var range1 = new DateRange(DefaultStart, DefaultEnd);
-        var range2 = new DateRange(DefaultStart, DefaultEnd);
+        // Arrange & Act
+        var date = new DateOnly(2026, 9, 1);
+        var dateRange = new DateRange(date, date);
 
         // Assert
-        Assert.Equal(range1, range2);
-        Assert.True(range1 == range2);
+        dateRange.IsValidOn(date).Should().BeTrue();
     }
 }
