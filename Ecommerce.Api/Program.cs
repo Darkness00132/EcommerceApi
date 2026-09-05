@@ -4,6 +4,7 @@ using Domain.Entities.Identity;
 using Domain.ValueObjects;
 using Ecommerce.Api.Constants;
 using Ecommerce.Api.ExceptionHandling;
+using Ecommerce.Api.Extensions;
 using Ecommerce.Api.Services;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
@@ -14,7 +15,7 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-
+builder.Services.AddRateLimiting();
 builder.Services.AddAntiforgery(options => {
     options.Cookie.Name = AccountApiConstants.AntiforgeryCookieName;
 
@@ -88,6 +89,8 @@ if (app.Environment.IsProduction()) {
 app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

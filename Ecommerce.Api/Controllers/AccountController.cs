@@ -13,13 +13,10 @@ using MediatR;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Ecommerce.Api.Controllers;
 
-/// <summary>
-/// Provides endpoints for account registration, authentication,
-/// token management, email confirmation, and password recovery.
-/// </summary>
 [ApiController]
 [Route("api/account")]
 public sealed class AccountController(
@@ -36,6 +33,10 @@ public sealed class AccountController(
     /// <response code="409">
     /// An account with the supplied email address already exists.
     /// </response>
+    /// <param name="command">The registration details.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>A successful response when the account is created.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult> Register(
@@ -54,6 +55,10 @@ public sealed class AccountController(
     /// <response code="400">
     /// The confirmation token is invalid or the request data is invalid.
     /// </response>
+    /// <param name="command">The email confirmation request.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>No content when the email address is successfully confirmed.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(
@@ -71,6 +76,10 @@ public sealed class AccountController(
     /// <response code="200">Authentication was successful.</response>
     /// <response code="400">The supplied credentials are invalid.</response>
     /// <response code="401">The email or password is incorrect.</response>
+    /// <param name="command">The account credentials.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The generated access and refresh tokens.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<AccountTokenDto>> Login(
@@ -88,6 +97,10 @@ public sealed class AccountController(
     /// <response code="200">The token pair was refreshed successfully.</response>
     /// <response code="400">The refresh token is invalid.</response>
     /// <response code="401">The refresh token is expired or revoked.</response>
+    /// <param name="command">The refresh token request.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>A newly generated token pair.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<ActionResult<AccountTokenDto>> Refresh(
@@ -128,6 +141,10 @@ public sealed class AccountController(
     /// The password recovery request was accepted.
     /// </response>
     /// <response code="400">The supplied email address is invalid.</response>
+    /// <param name="command">The password reset request.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>An accepted response.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
@@ -146,6 +163,10 @@ public sealed class AccountController(
     /// <response code="400">
     /// The reset token is invalid or the new password does not meet the requirements.
     /// </response>
+    /// <param name="command">The password reset details.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>No content when the password is successfully reset.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(
@@ -196,6 +217,10 @@ public sealed class AccountController(
     /// </response>
     /// <response code="400">The supplied credentials are invalid.</response>
     /// <response code="401">The email or password is incorrect.</response>
+    /// <param name="command">The account credentials.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The access token information for the browser client.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("login-web")]
     [ValidateAntiForgeryToken]
@@ -220,6 +245,9 @@ public sealed class AccountController(
     /// <response code="401">
     /// The refresh token cookie is missing, invalid, expired, or revoked.
     /// </response>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>A new access token.</returns>
+    [EnableRateLimiting(RateLimitApiConstants.AuthPolicy)]
     [AllowAnonymous]
     [HttpPost("refresh-web")]
     [ValidateAntiForgeryToken]
