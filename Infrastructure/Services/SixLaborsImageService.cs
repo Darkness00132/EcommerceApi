@@ -16,16 +16,17 @@ internal class SixLaborsImageService : IImageManipulationService
     {
         using var image = await Image.LoadAsync(file.Content, cancellationToken);
 
-        var width = type switch {
-            ImageType.Product => 800,
-            ImageType.Category => 500,
-            ImageType.Thumbnail => 300,
-            _ => 800
+        var size = type switch {
+            ImageType.Product => new Size(800, 800),
+            ImageType.Category => new Size(500, 500),
+            ImageType.Thumbnail => new Size(300, 300),
+            _ => new Size(800, 800)
         };
 
-        if (image.Width > width) {
-            image.Mutate(x => x.Resize(width, 0));
-        }
+        image.Mutate(x => x.Resize(new ResizeOptions {
+            Size = size,
+            Mode = ResizeMode.Crop
+        }));
 
         var output = new MemoryStream();
 

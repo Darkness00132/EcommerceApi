@@ -33,7 +33,7 @@ internal class ForgotPasswordCommandHandler
         var url = $"{frontendUrl.TrimEnd('/')}/account/reset-password?email={Uri.EscapeDataString(user.Email!)}&token={Uri.EscapeDataString(token)}";
 
         var email = user.Email!;
-        var model = new PasswordResetEmailModel(user.DisplayName, url);
+        var model = new ForgotPasswordEmailModel(user.DisplayName, url);
 
         _backgroundJobs.Enqueue<IEmailSender>(sender => sender.SendAsync(email,
             "Reset your password",
