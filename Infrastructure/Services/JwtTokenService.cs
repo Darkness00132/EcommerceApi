@@ -10,29 +10,33 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure.Services;
 
-internal class JwtTokenService(
-    UserManager<AppUser> userManager,
-    IOptions<JwtSettings> jwtOptions)
-    : IJwtTokenService
+internal class JwtTokenService : IJwtTokenService
 {
+    private readonly UserManager<AppUser> _userManager;
+    private readonly JwtSettings _settings;
+
+    public JwtTokenService(UserManager<AppUser> userManager, IOptions<JwtSettings> jwtOptions)
+    {
+        _userManager = userManager;
+        _settings = jwtOptions.Value;
+    }
+
     public async Task<(string Token, DateTime ExpiresAt)> GenerateAsync(
         AppUser user,
         CancellationToken cancellationToken = default)
     {
-        var settings = jwtOptions.Value;
-
         var expiresAt = DateTime.UtcNow.AddMinutes(
-            settings.AccessTokenExpirationInMinutes);
+            _settings.AccessTokenExpirationInMinutes);
 
         var claims = await GetClaimsAsync(user);
 
         var signingCredentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key)),
             SecurityAlgorithms.HmacSha256);
 
         var securityToken = new JwtSecurityToken(
-            issuer: settings.Issuer,
-            audience: settings.Audience,
+            issuer: _settings.Issuer,
+            audience: _settings.Audience,
             claims: claims,
             expires: expiresAt,
             signingCredentials: signingCredentials);
@@ -45,7 +49,7 @@ internal class JwtTokenService(
 
     private async Task<List<Claim>> GetClaimsAsync(AppUser user)
     {
-        var roles = await userManager.GetRolesAsync(user);
+        var roles = await _userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
         {

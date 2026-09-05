@@ -17,8 +17,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ecommerce.Api.Controllers;
 
 /// <summary>
-/// Provides account management endpoints including registration,
-/// authentication, token management, email confirmation, and password recovery.
+/// Provides endpoints for account registration, authentication,
+/// token management, email confirmation, and password recovery.
 /// </summary>
 [ApiController]
 [Route("api/account")]
@@ -27,11 +27,15 @@ public sealed class AccountController(
     IAntiforgery antiforgery) : ControllerBase
 {
     /// <summary>
-    /// Creates a new account and sends an email confirmation message.
+    /// Registers a new account and initiates email confirmation.
     /// </summary>
-    /// <param name="command">The registration details.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>A successful response when the account is created.</returns>
+    /// <response code="201">The account was created successfully.</response>
+    /// <response code="400">
+    /// The supplied registration data is invalid.
+    /// </response>
+    /// <response code="409">
+    /// An account with the supplied email address already exists.
+    /// </response>
     [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult> Register(
@@ -44,11 +48,12 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Confirms an account email address using the provided confirmation token.
+    /// Confirms a user's email address using a confirmation token.
     /// </summary>
-    /// <param name="command">The email confirmation request.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>No content when the email address is successfully confirmed.</returns>
+    /// <response code="204">The email address was confirmed successfully.</response>
+    /// <response code="400">
+    /// The confirmation token is invalid or the request data is invalid.
+    /// </response>
     [AllowAnonymous]
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(
@@ -61,11 +66,11 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Authenticates a client and returns access and refresh tokens.
+    /// Authenticates a user and returns an access and refresh token pair.
     /// </summary>
-    /// <param name="command">The account credentials.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>The generated access and refresh tokens.</returns>
+    /// <response code="200">Authentication was successful.</response>
+    /// <response code="400">The supplied credentials are invalid.</response>
+    /// <response code="401">The email or password is incorrect.</response>
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<AccountTokenDto>> Login(
@@ -78,11 +83,11 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Exchanges a refresh token for a new access token and refresh token pair.
+    /// Exchanges a refresh token for a new access and refresh token pair.
     /// </summary>
-    /// <param name="command">The refresh token request.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>A newly generated token pair.</returns>
+    /// <response code="200">The token pair was refreshed successfully.</response>
+    /// <response code="400">The refresh token is invalid.</response>
+    /// <response code="401">The refresh token is expired or revoked.</response>
     [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<ActionResult<AccountTokenDto>> Refresh(
@@ -95,11 +100,11 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Revokes a refresh token and signs the user out.
+    /// Revokes the supplied refresh token and signs the user out.
     /// </summary>
-    /// <param name="command">The token revocation request.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>No content when the token is successfully revoked.</returns>
+    /// <response code="204">The refresh token was revoked successfully.</response>
+    /// <response code="400">The supplied token is invalid.</response>
+    /// <response code="401">The user is not authenticated.</response>
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout(
@@ -112,15 +117,17 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Sends a password reset email if the account exists.
+    /// Initiates the password recovery process for an account.
     /// </summary>
     /// <remarks>
-    /// This endpoint always returns success to avoid revealing
-    /// whether an account is registered with the supplied email address.
+    /// This endpoint always returns a successful response, regardless of
+    /// whether an account exists for the supplied email address, to prevent
+    /// account enumeration.
     /// </remarks>
-    /// <param name="command">The password reset request.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>An accepted response.</returns>
+    /// <response code="202">
+    /// The password recovery request was accepted.
+    /// </response>
+    /// <response code="400">The supplied email address is invalid.</response>
     [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
@@ -135,9 +142,10 @@ public sealed class AccountController(
     /// <summary>
     /// Resets an account password using a valid password reset token.
     /// </summary>
-    /// <param name="command">The password reset details.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>No content when the password is successfully reset.</returns>
+    /// <response code="204">The password was reset successfully.</response>
+    /// <response code="400">
+    /// The reset token is invalid or the new password does not meet the requirements.
+    /// </response>
     [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(
@@ -150,10 +158,10 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Returns details about the currently authenticated account.
+    /// Gets the account information of the currently authenticated user.
     /// </summary>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>The current account information.</returns>
+    /// <response code="200">The account information was retrieved successfully.</response>
+    /// <response code="401">The user is not authenticated.</response>
     [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<CurrentAccountDto>> Me(
@@ -167,9 +175,9 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Generates an anti-forgery token for browser-based authentication flows.
+    /// Generates an anti-forgery token for browser-based authentication.
     /// </summary>
-    /// <returns>The generated anti-forgery request token.</returns>
+    /// <response code="200">The anti-forgery token was generated successfully.</response>
     [AllowAnonymous]
     [HttpGet("csrf-web")]
     public ActionResult<CsrfTokenResponse> Csrf()
@@ -181,11 +189,13 @@ public sealed class AccountController(
 
     /// <summary>
     /// Authenticates a browser client and stores the refresh token
-    /// in a secure HttpOnly cookie.
+    /// in a secure, HttpOnly cookie.
     /// </summary>
-    /// <param name="command">The account credentials.</param>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>The access token information for the browser client.</returns>
+    /// <response code="200">
+    /// Authentication was successful and an access token was returned.
+    /// </response>
+    /// <response code="400">The supplied credentials are invalid.</response>
+    /// <response code="401">The email or password is incorrect.</response>
     [AllowAnonymous]
     [HttpPost("login-web")]
     [ValidateAntiForgeryToken]
@@ -203,10 +213,13 @@ public sealed class AccountController(
     }
 
     /// <summary>
-    /// Refreshes the current browser session using the refresh-token cookie.
+    /// Refreshes the current browser session using the refresh token
+    /// stored in the authentication cookie.
     /// </summary>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>A new access token.</returns>
+    /// <response code="200">The browser session was refreshed successfully.</response>
+    /// <response code="401">
+    /// The refresh token cookie is missing, invalid, expired, or revoked.
+    /// </response>
     [AllowAnonymous]
     [HttpPost("refresh-web")]
     [ValidateAntiForgeryToken]
@@ -233,8 +246,10 @@ public sealed class AccountController(
     /// <summary>
     /// Revokes the browser refresh token and removes the authentication cookie.
     /// </summary>
-    /// <param name="cancellationToken">The request cancellation token.</param>
-    /// <returns>No content when the session is successfully revoked.</returns>
+    /// <response code="204">
+    /// The browser session was revoked successfully.
+    /// </response>
+    /// <response code="401">The user is not authenticated.</response>
     [HttpPost("revoke-web")]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -254,16 +269,12 @@ public sealed class AccountController(
         return NoContent();
     }
 
-    /// <summary>
-    /// Stores the refresh token in a secure HttpOnly cookie.
-    /// </summary>
-    /// <param name="tokens">The generated account tokens.</param>
     private void SetRefreshTokenCookie(AccountTokenDto tokens)
     {
         var cookieOptions = new CookieOptions {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.Lax,
             Expires = tokens.RefreshTokenExpiresAt
         };
 
@@ -273,9 +284,6 @@ public sealed class AccountController(
             cookieOptions);
     }
 
-    /// <summary>
-    /// Removes the refresh-token cookie from the current response.
-    /// </summary>
     private void DeleteRefreshTokenCookie()
     {
         Response.Cookies.Delete(
