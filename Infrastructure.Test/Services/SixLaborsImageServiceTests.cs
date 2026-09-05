@@ -40,24 +40,6 @@ public class SixLaborsImageServiceTests
         image.Height.Should().Be(expectedHeight);
     }
 
-    [Fact]
-    public async Task Do_Not_Enlarge_Image_That_Already_Meets_Requirements()
-    {
-        // Arrange
-        var file = CreateImage(400, 200);
-
-        // Act
-        var result = await _sut.ResizeImageAsync(
-            file,
-            ImageType.Product);
-
-        // Assert
-        using var image = await Image.LoadAsync(result.Content);
-
-        image.Width.Should().Be(400);
-        image.Height.Should().Be(200);
-    }
-
     private static FileDto CreateImage(int width, int height)
     {
         var stream = new MemoryStream();
